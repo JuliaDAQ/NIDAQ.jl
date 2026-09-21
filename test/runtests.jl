@@ -71,7 +71,7 @@ end
         @test stop(t) == nothing
         @test NIDAQ.CfgSampClkTiming(t.th, convert(Ref{Int8},Cchar.(b"")), 100.0, NIDAQ.Val_Rising,
                 NIDAQ.Val_FiniteSamps, UInt64(10)) == 0
-        @test write(t, rand(UInt32,10,2)) == 10
+        @test NIDAQ.write(t, rand(UInt32,10,2)) == 10
         @test start(t) == nothing
         @test NIDAQ.WaitUntilTaskDone(t.th,10.0) == 0
         @test stop(t) == nothing

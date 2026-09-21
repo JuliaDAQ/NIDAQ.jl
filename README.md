@@ -4,10 +4,7 @@ National Instruments Data Acquisition Interface
 This package provides an interface to NI-DAQmx--- National Instruments' driver
 for their data acquisition boards.  Their entire C header file was ported
 using [Clang.jl](https://github.com/JuliaInterop/Clang.jl), and a rudimentary
-higher-level API is provided for ease of use. Clang v0.13.0 was used 
-(old-generator) and functions with VarArg are not ported (see commented 
-functions in functions_V21.3.0.jl). VarArg functions are supported only 
-from Clang v0.14.0 on. 
+higher-level API is provided for ease of use.
 
 Similar functionality for the Python language is provided by
 [PyDAQmx](https://pythonhosted.org/PyDAQmx).
@@ -20,13 +17,13 @@ System Requirements
 - NI-DAQmx Base is not supported  
 
 **Linux specific**  
-- Requires the DAQmx 21.3 or 20.1
-- DAQmx on linux does not support USB DAQ devices
+- USB DAQ devices are not supported
 
 Installation
 ============
 **Windows**  
 First download and install NI-DAQmx version
+[26.5](https://www.ni.com/en/support/downloads/drivers/download.ni-daq-mx.html#484356)
 [23.5](https://www.ni.com/en/support/downloads/drivers/download.ni-daq-mx.html#484356) (or
 [21.3](https://www.ni.com/de-de/support/downloads/drivers/download.ni-daqmx.html#428058),
 [20.1](https://www.ni.com/en-us/support/downloads/drivers/download.ni-daqmx.html#348669), 
@@ -381,24 +378,25 @@ Run `generator.jl` in `dev` folder, it will generate `NIDAQmx.jl` and `common.jl
 
 Move the above two files to `src` folder, and edit the file names accordingly as below:
 ```
-$ mv NIDAQmx.jl src/functions_V<version>.jl
-$ mv common.jl src/constants_V<version>.jl
+$ mv NIDAQmx.jl ../src/functions_V<version>.jl
+$ mv common.jl ../src/constants_V<version>.jl
 ```
 
 Finally, the following manual edits are necessary:
 
 + In `constants_V<version>.jl`
+  + delete `const __CFUNC = __stdcall`
   + delete `const CVICALLBACK = CVICDECL`,
-  + in NI-DAQmx v19.6 add `struct CVITime; lsb::uInt64; msb::int64; end`
-  + in NI-DAQmx v17.1.0 comment out `const CVIAbsoluteTime = VOID`
   + change `const bool32 = uInt32` to `const bool32 = Bool32`.
-  + in NI-DAQmx v15 to v18 comment out `using Compat`
   + in NI-DAQmx v23.5.0, comment out `const __CFUNC = __stdcall`
   + in NI-DAQmx v23.5.0 comment out all functions.
+  + in NI-DAQmx v19.6 add `struct CVITime; lsb::uInt64; msb::int64; end`
+  + in NI-DAQmx v17.1.0 comment out `const CVIAbsoluteTime = VOID`
+  + in NI-DAQmx v15 to v18 comment out `using Compat`
 + In `functions_V<version>.jl`
+  + in NI-DAQmx v21.3 and earlier, globally search for `Cstring` and replace with `SafeCstring`
   + in NI-DAQmx v18 and earlier, globally search for `Ptr` and replace with `Ref`, then globally
 search for `CallbackRef` and replace with `CallbackPtr`.
-  + globally search for `Cstring` and replace with `SafeCstring`
   + for Julia 0.7 support, replace `type` with `_type`
 
 

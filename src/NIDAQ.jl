@@ -96,8 +96,8 @@ end
 safechop(str::AbstractString) = isempty(str) ? str : chop(str)
 
 function catch_error(code::Int32, extra::String=""; err_fcn=error)
-    sz = DAQmxGetErrorString(code, convert(Ptr{NIDAQ.dType},C_NULL), convert(UInt32,0))
-    data = zeros(NIDAQ.dType,sz)
+    sz = DAQmxGetErrorString(code, convert(Ptr{Cchar},C_NULL), convert(UInt32,0))
+    data = zeros(Cchar,sz)
     ret = DAQmxGetErrorString(code, Ref(data,1), convert(UInt32,sz))
     data = String(UInt8.(data))
     ret>0 && @warn("DAQmxGetErrorString error $ret")
@@ -114,7 +114,7 @@ include("counter.jl")
 include("properties.jl")
 include("deprecations.jl")
 
-str2code(s::String) = str2code(Val(NIDAQ.dType), s)
+str2code(s::String) = str2code(Val(Cchar), s)
 str2code(::Val{Cchar}, s::String) = Ref(Cchar.(codeunits(s)),1)
 str2code(::Val{UInt8}, s::String) = Ref(codeunits(s),1)
 
