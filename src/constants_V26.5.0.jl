@@ -14,17 +14,17 @@ const float32 = Cfloat
 
 const float64 = Cdouble
 
-const int64 = Cint
+const int64 = Clonglong
 
-const __int64 = Cuint
+const uInt64 = Culonglong
 
 struct CVITime
-    data::NTuple{1, UInt8}
+    data::NTuple{16, UInt8}
 end
 
 function Base.getproperty(x::Ptr{CVITime}, f::Symbol)
-    f === :lsb && return Ptr{Cint}(x + 0)
-    f === :msb && return Ptr{int64}(x + 0)
+    f === :lsb && return Ptr{uInt64}(x + 0)
+    f === :msb && return Ptr{int64}(x + 8)
     return getfield(x, f)
 end
 
@@ -48,7 +48,7 @@ function Base.propertynames(x::CVITime, private::Bool = false)
 end
 
 struct CVIAbsoluteTime
-    data::NTuple{1, UInt8}
+    data::NTuple{16, UInt8}
 end
 
 function Base.getproperty(x::Ptr{CVIAbsoluteTime}, f::Symbol)
@@ -76,7 +76,7 @@ function Base.propertynames(x::CVIAbsoluteTime, private::Bool = false)
         end...)
 end
 
-#const bool32 = uInt32
+# const bool32 = uInt32
 const bool32 = Bool32
 
 const TaskHandle = Ptr{Cvoid}

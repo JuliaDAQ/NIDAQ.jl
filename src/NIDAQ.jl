@@ -115,7 +115,7 @@ include("properties.jl")
 include("deprecations.jl")
 
 str2code(s::String) = str2code(Val(Cchar), s)
-str2code(::Val{Cchar}, s::String) = Ref(Cchar.(codeunits(s)),1)
+str2code(::Val{Cchar}, s::String) = Ref(Cchar.(codeunits(s * '\0')),1)
 str2code(::Val{UInt8}, s::String) = Ref(codeunits(s),1)
 
 @doc """`read(task, precision, nsamples) -> Matrix`

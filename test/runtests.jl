@@ -47,7 +47,7 @@ end
         @test start(t) == nothing
         @test length(NIDAQ.read(t, 6, UInt32)) == 12
         @test stop(t) == nothing
-        @test NIDAQ.CfgSampClkTiming(t.th, convert(Ref{Int8},Cchar.(b"")), 100.0, NIDAQ.Val_Rising,
+        @test NIDAQ.CfgSampClkTiming(t.th, NIDAQ.str2code(""), 100.0, NIDAQ.Val_Rising,
                 NIDAQ.Val_FiniteSamps, UInt64(10)) == 0
         @test start(t) == nothing
         @test length(NIDAQ.read(t)) == 20
@@ -69,7 +69,7 @@ end
         @test start(t) == nothing
         @test NIDAQ.write(t, rand(UInt32,6,2)) == 6
         @test stop(t) == nothing
-        @test NIDAQ.CfgSampClkTiming(t.th, convert(Ref{Int8},Cchar.(b"")), 100.0, NIDAQ.Val_Rising,
+        @test NIDAQ.CfgSampClkTiming(t.th, NIDAQ.str2code(""), 100.0, NIDAQ.Val_Rising,
                 NIDAQ.Val_FiniteSamps, UInt64(10)) == 0
         @test NIDAQ.write(t, rand(UInt32,10,2)) == 10
         @test start(t) == nothing
@@ -96,7 +96,7 @@ end
         rslt = Ref{UInt32}(0)
         NIDAQ.DAQmxGetBufInputOnbrdBufSize(t.th, rslt)
         if rslt[] != 0 #If the device supports buffered digital input
-            @test NIDAQ.CfgSampClkTiming(t.th, convert(Ref{Int8},Cchar.(b"")), 100.0, NIDAQ.Val_Rising,
+            @test NIDAQ.CfgSampClkTiming(t.th, NIDAQ.str2code(""), 100.0, NIDAQ.Val_Rising,
                                         NIDAQ.Val_FiniteSamps, UInt64(10)) == 0
             if first(props["ProductCategory"]) != :Val_MSeriesDAQ # M Series has no digital onboard clock
             @test start(t) == nothing
@@ -126,7 +126,7 @@ end
         rslt = Ref{UInt32}(0)
         NIDAQ.DAQmxGetBufOutputOnbrdBufSize(t.th, rslt)
         if rslt[] != 0 #If the device supports buffered digital output
-            @test NIDAQ.CfgSampClkTiming(t.th, convert(Ref{Int8},Cchar.(b"")), 100.0, NIDAQ.Val_Rising,
+            @test NIDAQ.CfgSampClkTiming(t.th, NIDAQ.str2code(""), 100.0, NIDAQ.Val_Rising,
                                         NIDAQ.Val_FiniteSamps, UInt64(10)) == 0
             if first(props["ProductCategory"]) != :Val_MSeriesDAQ # M Series has no digital onboard clock
                 @test NIDAQ.write(t, rand(UInt32,10,2)) == 10
