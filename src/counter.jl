@@ -60,8 +60,7 @@ function quadrature_input(channel::String; z_enable::Bool=true)
             Val_Ticks,
             UInt32(1), 0.0,
             str2code(""))
-    ret>0 && @warn(error(ret))
-    ret<0 && error(error(ret))
+    ret==0 || catch_error(ret)
     t
 end
 
@@ -142,7 +141,7 @@ function Base.read(t::CITask, channel::String; num_samples::Integer = -1)
 
     function read_counter_vector(precision::DataType, cfunction::Function)
         num_samples_read = Int32[0]
-        data = Array(precision, num_samples)
+        data = Vector{precision}(undef, num_samples)
         catch_error( cfunction(t.th,
             convert(Int32,num_samples),
             1.0,
@@ -150,14 +149,13 @@ function Base.read(t::CITask, channel::String; num_samples::Integer = -1)
             convert(UInt32,num_samples),
             Ref(num_samples_read,1),
             reinterpret(Ptr{Bool32},C_NULL)) )
-        data = data[1:num_samples_read[1]]
-        reshape(data, (num_samples, div(length(data),num_samples)))
+        resize!(data, num_samples_read[1])
     end
 
     function read_counter_2vectors(precision::DataType, cfunction::Function)
         num_samples_read = Int32[0]
-        high = Array(precision, num_samples)
-        low = Array(precision, num_samples)
+        high = Vector{precision}(undef, num_samples)
+        low = Vector{precision}(undef, num_samples)
         catch_error( cfunction(t.th,
             convert(Int32,num_samples),
             1.0,
@@ -167,13 +165,11 @@ function Base.read(t::CITask, channel::String; num_samples::Integer = -1)
             convert(UInt32,num_samples),
             Ref(num_samples_read,1),
             reinterpret(Ptr{Bool32},C_NULL)) )
-        high = high[1:num_samples_read[1]]
-        low = low[1:num_samples_read[1]]
-        reshape(high, (num_samples, div(length(high),num_samples))),
-            reshape(low, (num_samples, div(length(low),num_samples)))
+        resize!(high, num_samples_read[1])
+        resize!(low, num_samples_read[1])
     end
 
-    tmp = channel_type(t.th, channel)
+    tmp = channel_type(t, channel)
     if tmp[2] == Val_CountEdges
         data = read_counter_vector(UInt32, ReadCounterU32)
     elseif tmp[2] == Val_PulseTime

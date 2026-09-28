@@ -141,6 +141,49 @@ end
     end
 end
 
+@testset "counter input" begin
+    if isempty(props["CIPhysicalChans"][1][1])
+        @info("$dev does not support CIPhysicalChans")
+    else
+        ch = dev*"/ctr0"
+        meas_types = props["CISupportedMeasTypes"][1]
+
+        # count edges: on-demand reads return the running count, which with no
+        # signal connected stays at initial_count
+        t = count_edges(ch; initial_count=7)
+        @test typeof(t) == NIDAQ.CITask
+        @test channel_type(t, ch) == (NIDAQ.Val_CI, NIDAQ.Val_CountEdges)
+        @test start(t) == nothing
+        data = read(t, ch; num_samples=1)
+        @test data isa Vector{UInt32}
+        @test length(data) == 1
+        @test data[1] >= 7
+        data = read(t, ch; num_samples=3)
+        @test data isa Vector{UInt32}
+        @test length(data) == 3
+        @test stop(t) == nothing
+        @test clear(t) == nothing
+
+        if :Val_Position_AngEncoder in meas_types
+            t = quadrature_input(ch)
+            @test typeof(t) == NIDAQ.CITask
+            @test channel_type(t, ch) == (NIDAQ.Val_CI, NIDAQ.Val_Position_AngEncoder)
+            @test clear(t) == nothing
+        else
+            @info("$dev does not support angular encoder measurements")
+        end
+
+        if :Val_TwoEdgeSep in meas_types
+            t = line_to_line(ch)
+            @test typeof(t) == NIDAQ.CITask
+            @test channel_type(t, ch) == (NIDAQ.Val_CI, NIDAQ.Val_TwoEdgeSep)
+            @test clear(t) == nothing
+        else
+            @info("$dev does not support two-edge separation measurements")
+        end
+    end
+end
+
 @testset "counter output" begin
     if isempty(props["COPhysicalChans"][1][1])
         @info("$dev does not support COPhysicalChans")
