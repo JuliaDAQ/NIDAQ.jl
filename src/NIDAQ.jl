@@ -96,22 +96,37 @@ for sym in names(NIDAQ, all=true)
         push!(public_names, Symbol(sym_str))
     end
 end
-safechop(str::AbstractString) = isempty(str) ? str : chop(str)
+# convert a NUL-terminated buffer filled in by the driver to a String
+function cstring(data::Vector{Cchar})
+    n = something(findfirst(iszero, data), length(data)+1) - 1
+    GC.@preserve data unsafe_string(pointer(data), n)
+end
+
+# call a DAQmx getter which fills a caller-supplied char buffer, first asking
+# the driver how large that buffer needs to be
+function getstring(f, args...)
+    sz = f(args..., Ptr{Cchar}(C_NULL), UInt32(0))
+    sz < 0 && catch_error(sz)
+    data = Vector{Cchar}(undef, sz)
+    catch_error(f(args..., data, UInt32(sz)))
+    cstring(data)
+end
 
 @static if VERSION >= v"1.11"
     eval(Expr(:public, public_names...))
 end
 
 function catch_error(code::Int32, extra::String=""; err_fcn=error)
-    sz = DAQmxGetErrorString(code, convert(Ptr{Cchar},C_NULL), convert(UInt32,0))
-    data = zeros(Cchar,sz)
-    ret = DAQmxGetErrorString(code, Ref(data,1), convert(UInt32,sz))
-    data = String(UInt8.(data))
+    code == 0 && return nothing
+    sz = DAQmxGetErrorString(code, Ptr{Cchar}(C_NULL), UInt32(0))
+    data = Vector{Cchar}(undef, max(sz, 0))
+    ret = DAQmxGetErrorString(code, data, UInt32(length(data)))
     ret>0 && @warn("DAQmxGetErrorString error $ret")
     ret<0 && err_fcn("DAQmxGetErrorString error $ret")
-    data = safechop(data)
-    code>0 && @warn("NIDAQmx: "*extra*data)
-    code<0 && err_fcn("NIDAQmx: "*extra*data)
+    msg = "NIDAQmx: " * extra * cstring(data)
+    code>0 && @warn(msg)
+    code<0 && err_fcn(msg)
+    nothing
 end
 
 include("task.jl")

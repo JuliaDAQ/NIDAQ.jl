@@ -4,11 +4,8 @@
 get a list of available NIDAQ devices
 """
 function devices()
-    sz = GetSysDevNames(Ref{Cchar}(C_NULL), UInt32(0))
-    data=zeros(Cchar,sz)
-    catch_error(GetSysDevNames(Ref(data,1), UInt32(sz)))
-    devs = map((x)->convert(String,x), split(safechop(ascii(String(UInt8.(data)))),", "))
-    devs[devs .!= ""]
+    devs = split(getstring(GetSysDevNames), ", ")
+    String.(filter(!isempty, devs))
 end
 
 for (jfunction, cfunction) in (
@@ -19,12 +16,7 @@ for (jfunction, cfunction) in (
         (:counter_input_channels, GetDevCIPhysicalChans),
         (:counter_output_channels, GetDevCOPhysicalChans))
     @eval function $jfunction(device::String)
-        sz = $cfunction(str2code(device), Ref{Cchar}(C_NULL), UInt32(0))
-        data=zeros(Cchar,sz)
-        catch_error( $cfunction(str2code(device), Ref(data,1),
-                UInt32(sz)) )
-        map((x)->convert(String,x), split(safechop(ascii(String(UInt8.(data)))),", "))
-        
+        String.(split(getstring($cfunction, str2code(device)), ", "))
     end
 
     @eval function $jfunction()
@@ -138,7 +130,7 @@ function _getproperties(args, suffix::String, warning::Bool)
                     catch
                     end
                 elseif basetype == Int8
-                    data = split(safechop(ascii(String(UInt8.(data)))),", ")
+                    data = split(cstring(data), ", ")
 
                 end
             catch
