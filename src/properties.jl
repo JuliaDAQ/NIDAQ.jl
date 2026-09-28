@@ -90,6 +90,8 @@ function channel_type(t::Task, channel::String)
         ret = GetCIMeasType(t.th, str2code(channel), Ref(val2,1))
     elseif val1[1] == Val_CO
         ret = GetCOOutputType(t.th, str2code(channel), Ref(val2,1))
+    else
+        error("unsupported channel type")
     end
     catch_error(ret)
 
