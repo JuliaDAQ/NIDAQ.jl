@@ -8,7 +8,7 @@ t = analog_input("Dev1/ai0:1")
 getproperties(t)
 setproperty!(t, "Dev1/ai0", "Max", 5.0)
 start(t)
-read(t, Float64, 10)
+read(t, 10)
 stop(t)
 clear(t)
 
@@ -125,7 +125,7 @@ str2code(s::String) = str2code(Val(Cchar), s)
 str2code(::Val{Cchar}, s::String) = Ref(Cchar.(codeunits(s * '\0')),1)
 str2code(::Val{UInt8}, s::String) = Ref(codeunits(s),1)
 
-@doc """`read(task, precision, nsamples) -> Matrix`
+@doc """`read(task, nsamples, precision) -> Matrix`
 
 receive data from all analog or digital channels in a NIDAQ task
 """ read
