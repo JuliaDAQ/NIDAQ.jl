@@ -36,7 +36,7 @@ read_digital_cfunctions = Dict{Type,Function}(
     UInt16 => ReadDigitalU16,
     UInt32 => ReadDigitalU32 )
 
-function read(t::DITask, num_samples_per_chan::Integer = -1, precision::DataType = UInt32)
+function Base.read(t::DITask, num_samples_per_chan::Integer = -1, precision::DataType = UInt32)
     outdata_ref = Ref{Cuint}()
     DAQmxGetTaskNumChans(t.th, outdata_ref)
     num_channels = outdata_ref.x
@@ -59,7 +59,7 @@ for (cfunction, types) in (
         (WriteDigitalU8,  UInt8),
         (WriteDigitalU16, UInt16),
         (WriteDigitalU32, UInt32))
-    @eval function write(t::DOTask, data::Matrix{$types})
+    @eval function Base.write(t::DOTask, data::Matrix{$types})
         num_samples_per_chan::Int32 = size(data, 1)
         data = reshape(data, length(data))
         num_samples_per_chan_written = Int32[0]
@@ -73,6 +73,6 @@ for (cfunction, types) in (
             reinterpret(Ptr{Bool32},C_NULL)) )
         num_samples_per_chan_written[1]
     end
-    @eval write(t::DOTask, data::Vector{$types}) = 
-        write(t, reshape(data, (length(data),1)))
+    @eval Base.write(t::DOTask, data::Vector{$types}) = 
+        Base.write(t, reshape(data, (length(data),1)))
 end     

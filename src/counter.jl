@@ -129,7 +129,7 @@ end
 
 receive data from the specified counter channel in the specified NIDAQ task
 """
-function read(t::CITask, channel::String; num_samples::Integer = -1)
+function Base.read(t::CITask, channel::String; num_samples::Integer = -1)
     if num_samples==-1;  num_samples=1024;  end
 
     #function read_counter_scalar(precision::DataType, cfunction::Function)

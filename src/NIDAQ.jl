@@ -20,14 +20,8 @@ More examples are in tests/.
 """
 module NIDAQ
 
-if VERSION < v"1.0.0"
-    import Base.start
-else
-    export start
-end
-
 # tasks
-export stop, clear
+export start, stop, clear
 
 # channels
 export analog_input, analog_output, digital_input, digital_output
@@ -51,6 +45,11 @@ const SafeCstring = Ref{UInt8}
 
 primitive type Bool32<:Integer 32 end
 export Bool32
+
+
+@static if VERSION >= v"1.11"
+    eval(Expr(:public, :Task, :AITask, :AOTask, :DITask, :DOTask, :CITask, :COTask, :str2code))
+end
 
 try
   global ver
@@ -76,6 +75,7 @@ end
 unsigned_constants = Dict{UInt64,Symbol}()
 signed_constants = Dict{Int64,Symbol}()
 
+public_names = Symbol[]
 for sym in names(NIDAQ, all=true)
     @isdefined(sym) || continue
     sym_str = string(sym)
@@ -83,17 +83,24 @@ for sym in names(NIDAQ, all=true)
     sym_str = sym_str[6:end]
     sym_str[1]=='_' && (sym_str = sym_str[2:end])
     if @eval typeof($sym) <: Unsigned
-        @eval $(Symbol(sym_str)) = UInt32($sym)
+        @eval const $(Symbol(sym_str)) = UInt32($sym)
         unsigned_constants[eval(:($sym))] = Symbol(sym_str)
+        push!(public_names, Symbol(sym_str))
     elseif @eval typeof($sym) <: Signed
         sym_str[1:min(end,4)]=="Val_" || continue
-        @eval $(Symbol(sym_str)) = convert(Int32,$sym)
+        @eval const $(Symbol(sym_str)) = convert(Int32,$sym)
         signed_constants[eval(:($sym))] = Symbol(sym_str)
+        push!(public_names, Symbol(sym_str))
     elseif eval(:(typeof($sym)<:Function))
-        @eval $(Symbol(sym_str)) = $sym
+        @eval const $(Symbol(sym_str)) = $sym
+        push!(public_names, Symbol(sym_str))
     end
 end
 safechop(str::AbstractString) = isempty(str) ? str : chop(str)
+
+@static if VERSION >= v"1.11"
+    eval(Expr(:public, public_names...))
+end
 
 function catch_error(code::Int32, extra::String=""; err_fcn=error)
     sz = DAQmxGetErrorString(code, convert(Ptr{Cchar},C_NULL), convert(UInt32,0))
