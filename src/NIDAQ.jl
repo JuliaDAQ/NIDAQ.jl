@@ -121,6 +121,19 @@ include("counter.jl")
 include("properties.jl")
 include("deprecations.jl")
 
+for f in (:analog_input, :analog_output, :acceleration_input,
+          :digital_input, :digital_output,
+          :count_edges, :quadrature_input, :line_to_line, :generate_pulses)
+    @eval function $f(body::Function, args...; kwargs...)
+        t = $f(args...; kwargs...)
+        try
+            body(t)
+        finally
+            clear(t)
+        end
+    end
+end
+
 str2code(s::String) = str2code(Val(Cchar), s)
 str2code(::Val{Cchar}, s::String) = Ref(Cchar.(codeunits(s * '\0')),1)
 str2code(::Val{UInt8}, s::String) = Ref(codeunits(s),1)

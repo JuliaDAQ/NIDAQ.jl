@@ -32,6 +32,51 @@ end
 end
 
 
+@testset "task lifecycle" begin
+    if length(props["AIPhysicalChans"][1]) == 0
+        @info("$dev does not support AIPhysicalChans")
+    else
+        ch = dev*"/ai0"
+
+        # clear nulls the handle and is idempotent; close is an alias
+        t = analog_input(ch)
+        @test isopen(t)
+        @test clear(t) === nothing
+        @test !isopen(t)
+        @test clear(t) === nothing
+        t = analog_input(ch)
+        @test close(t) === nothing
+        @test !isopen(t)
+
+        # the do-block form returns the body's value and clears the task,
+        # whether or not the body throws
+        local inner
+        r = analog_input(ch) do t
+            inner = t
+            start(t)
+            length(read(t, 3))
+        end
+        @test r == 3
+        @test !isopen(inner)
+        @test_throws ErrorException analog_input(ch) do t
+            inner = t
+            error("boom")
+        end
+        @test !isopen(inner)
+
+        # a started task holds the device, so a second task cannot start until
+        # the first is cleared.  the finalizer must release it.
+        t1 = analog_input(ch)
+        start(t1)
+        t2 = analog_input(ch)
+        @test_throws ErrorException start(t2)
+        finalize(t1)
+        @test !isopen(t1)
+        @test start(t2) === nothing
+        @test clear(t2) === nothing
+    end
+end
+
 @testset "analog input" begin
     if length(props["AIPhysicalChans"][1]) == 0
         @info("$dev does not support AIPhysicalChans")

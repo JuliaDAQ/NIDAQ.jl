@@ -1,24 +1,50 @@
 abstract type Task end
 
 for pre in ("AI", "AO", "DI", "DO", "CI", "CO")
-  @eval mutable struct $(Symbol(pre*"Task")) <: Task
-      th::TaskHandle
-  end
-  @eval $(Symbol(pre*"Task"))() = $(Symbol(pre*"Task"))(task())
-  @eval $(Symbol(pre*"Task"))(s::String) = $(Symbol(pre*"Task"))(task(s))
+    T = Symbol(pre*"Task")
+    @eval mutable struct $T <: Task
+        th::TaskHandle
+        $T(th::TaskHandle) = finalizer(_clear!, new(th))
+    end
+    @eval $T() = $T(task())
+    @eval $T(s::String) = $T(task(s))
 end
 
+# finalizers must not throw, so ignore the return code here
+function _clear!(t::Task)
+    th = t.th
+    th == C_NULL && return nothing
+    t.th = C_NULL
+    DAQmxClearTask(th)
+    nothing
+end
+
+"""
+`clear(task)`
+
+stop the task and release its resources.  Calling `clear` twice is harmless.
+"""
+function clear(t::Task)
+    th = t.th
+    th == C_NULL && return nothing
+    t.th = C_NULL
+    catch_error(DAQmxClearTask(th))
+    nothing
+end
+
+Base.close(t::Task) = clear(t)
+Base.isopen(t::Task) = t.th != C_NULL
+
 function task(name::String)
-    t = TaskHandle[0]
-    catch_error( DAQmxCreateTask(str2code(name), pointer(t)) )
-    t[1]
+    th = Ref{TaskHandle}(C_NULL)
+    catch_error( DAQmxCreateTask(str2code(name), th) )
+    th[]
 end
 task() = task("")
 
 for (cfunction, jfunction) in (
         (DAQmxStartTask, :start),
-        (DAQmxStopTask,  :stop),
-        (DAQmxClearTask, :clear))
+        (DAQmxStopTask,  :stop))
         
     @eval function $jfunction(t::Task)
         catch_error( $cfunction(t.th) )
