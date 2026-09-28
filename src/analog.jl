@@ -115,9 +115,7 @@ function acceleration_input(t::AITask, channel::String;
                       range = nothing, # in g 
                       sensitivity::Real = 100. , # mV / g
                       currentexcitval::Real = 0.002) # Ampere
-    if isnothing(range)
-        @error "specifiy input ranges"
-    end
+    isnothing(range) && throw(ArgumentError("specify input ranges"))
     # https://zone.ni.com/reference/en-XX/help/370471AA-01/daqmxcfunc/daqmxcreateaiaccelchan/
     catch_error( CreateAIAccelChan(t.th,
             str2code(channel),
