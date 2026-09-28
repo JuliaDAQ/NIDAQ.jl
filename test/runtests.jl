@@ -40,6 +40,12 @@ end
         @test typeof(getproperties(t)) == Dict{String,Tuple{Any,Bool}}
         @test typeof(getproperties(t,dev*"/ai0")) == Dict{String,Tuple{Any,Bool}}
         @test typeof(t) == NIDAQ.AITask
+        # querying AI.Max returns the value coerced to the device's ranges, so it
+        # does not round-trip on devices with a single range; TermCfg does
+        @test setproperty!(t, dev*"/ai0", "Max", 5.0) === nothing
+        @test setproperty!(t, dev*"/ai0", "TermCfg", NIDAQ.Val_RSE) === nothing
+        @test getproperties(t, dev*"/ai0")["TermCfg"] == (:Val_RSE, true)
+        @test_throws ArgumentError setproperty!(t, dev*"/ai0", "Maxx", 5.0)
         @test start(t) == nothing
         @test length(NIDAQ.read(t, 3)) == 3
         buf1 = Vector{Float64}(undef, 3)

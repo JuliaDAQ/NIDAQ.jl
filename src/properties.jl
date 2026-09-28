@@ -216,7 +216,10 @@ function Base.setproperty!(t::Task, channel::String, property::String, value)
     kind = channel_types[ findall(channel_type(t, channel)[1] .==
             map((x)->getfield(NIDAQ,Symbol(x)), channel_types))[1]][end-1:end]
 
-    @eval ret = $(Symbol("DAQmxSet"*kind*property))($t.th, str2code($channel), $value)
+    sym = Symbol("DAQmxSet"*kind*property)
+    isdefined(NIDAQ, sym) || throw(ArgumentError("no settable property \"$property\" for $kind channels"))
+    cfunction = getfield(NIDAQ, sym)
+    ret = cfunction(t.th, str2code(channel), value)
     catch_error(ret, "DAQmxSet$kind$property: ")
     nothing
 end
