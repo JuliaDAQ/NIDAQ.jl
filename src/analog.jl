@@ -183,21 +183,25 @@ function Base.read(t::AITask, num_samples_per_chan::Integer = -1, precision::Dat
     resize!(data, num_samples_per_chan_read[1]*num_channels)
     num_channels==1 ? data : reshape(data, (div(length(data),num_channels), convert(Int64,num_channels)))
 end
-function Base.read!(data,t::AITask, num_samples_per_chan::Integer = -1, precision::DataType = Float64)
+function Base.read!(data::VecOrMat{T}, t::AITask) where {T}
     outdata_ref = Ref{Cuint}()
     DAQmxGetTaskNumChans(t.th, outdata_ref)
-    num_channels = outdata_ref.x
+    num_channels = size(data, 2)
+    outdata_ref.x == num_channels || throw(ArgumentError("`data` has $num_channels columns but the task has $(outdata_ref.x) channels"))
+    num_samples_per_chan = size(data, 1)
     num_samples_per_chan_read = Int32[0]
-    buffer_size = num_samples_per_chan==-1 ? 1024 : num_samples_per_chan
-    # data = Array{precision}(undef, buffer_size*num_channels)
-    catch_error( read_analog_cfunctions[precision](t.th,
-        convert(Int32,num_samples_per_chan),
+    catch_error( read_analog_cfunctions[T](t.th,
+        convert(Int32, num_samples_per_chan),
         1.0,
         reinterpret(Bool32,Val_GroupByChannel),
         Ref(data,1),
-        convert(UInt32,buffer_size*num_channels),
+        convert(UInt32,length(data)),
         Ref(num_samples_per_chan_read,1),
         reinterpret(Ptr{Bool32},C_NULL)) )
+    n = num_samples_per_chan_read[1]
+    n == num_samples_per_chan ||
+        error("NIDAQmx: read $n of $num_samples_per_chan samples per channel")
+    return data
 end
 
 

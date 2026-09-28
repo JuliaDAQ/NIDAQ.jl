@@ -42,10 +42,21 @@ end
         @test typeof(t) == NIDAQ.AITask
         @test start(t) == nothing
         @test length(NIDAQ.read(t, 3)) == 3
+        buf1 = Vector{Float64}(undef, 3)
+        @test read!(buf1, t) === buf1
+        @test all(isfinite, buf1)
+        @test_throws ArgumentError read!(Matrix{Float64}(undef, 3, 2), t)
         @test stop(t) == nothing
         @test analog_input(t, dev*"/ai1") == nothing
         @test start(t) == nothing
         @test length(NIDAQ.read(t, 6, UInt32)) == 12
+        buf2 = Matrix{Float64}(undef, 6, 2)
+        @test read!(buf2, t) === buf2
+        @test all(isfinite, buf2)
+        buf3 = Matrix{Int16}(undef, 4, 2)
+        @test read!(buf3, t) === buf3
+        @test_throws ArgumentError read!(Vector{Float64}(undef, 6), t)
+        @test_throws ArgumentError read!(Matrix{Float64}(undef, 6, 3), t)
         @test stop(t) == nothing
         @test NIDAQ.CfgSampClkTiming(t.th, NIDAQ.str2code(""), 100.0, NIDAQ.Val_Rising,
                 NIDAQ.Val_FiniteSamps, UInt64(10)) == 0
