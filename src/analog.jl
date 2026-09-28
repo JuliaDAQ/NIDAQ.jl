@@ -182,7 +182,7 @@ function Base.read(t::AITask, num_samples_per_chan::Integer = -1, precision::Dat
         convert(UInt32,buffer_size*num_channels),
         Ref(num_samples_per_chan_read,1),
         reinterpret(Ptr{Bool32},C_NULL)) )
-    data = data[1:num_samples_per_chan_read[1]*num_channels]
+    resize!(data, num_samples_per_chan_read[1]*num_channels)
     num_channels==1 ? data : reshape(data, (div(length(data),num_channels), convert(Int64,num_channels)))
 end
 function Base.read!(data,t::AITask, num_samples_per_chan::Integer = -1, precision::DataType = Float64)
