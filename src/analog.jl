@@ -175,27 +175,6 @@ read_cfunction(::AITask, ::Type{T}) where T =
 Base.read(t::AITask, num_samples_per_chan::Integer = -1, ::Type{T} = Float64) where T =
     _read(t, read_cfunction(t, T), T, num_samples_per_chan)
 
-function Base.read!(data::VecOrMat{T}, t::AITask) where {T}
-    outdata_ref = Ref{Cuint}()
-    DAQmxGetTaskNumChans(t.th, outdata_ref)
-    num_channels = size(data, 2)
-    outdata_ref.x == num_channels || throw(ArgumentError("`data` has $num_channels columns but the task has $(outdata_ref.x) channels"))
-    num_samples_per_chan = size(data, 1)
-    num_samples_per_chan_read = Int32[0]
-    catch_error( read_cfunction(t, T)(t.th,
-        convert(Int32, num_samples_per_chan),
-        1.0,
-        reinterpret(Bool32,Val_GroupByChannel),
-        Ref(data,1),
-        convert(UInt32,length(data)),
-        Ref(num_samples_per_chan_read,1),
-        reinterpret(Ptr{Bool32},C_NULL)) )
-    n = num_samples_per_chan_read[1]
-    n == num_samples_per_chan ||
-        error("NIDAQmx: read $n of $num_samples_per_chan samples per channel")
-    return data
-end
-
 
 for (cfunction, types) in (
         (WriteAnalogF64, Float64),

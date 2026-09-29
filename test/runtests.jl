@@ -230,10 +230,20 @@ end
         @test length(NIDAQ.read(t, 3)) == 3
         @test (@inferred NIDAQ.read(t, 3)) isa Matrix{UInt32}
         @test (@inferred NIDAQ.read(t, 3, UInt8)) isa Matrix{UInt8}
+        buf1 = Vector{UInt32}(undef, 3)
+        @test read!(buf1, t) === buf1
+        @test all(x -> x in (0, 1), buf1)
+        @test_throws ArgumentError read!(Matrix{UInt32}(undef, 3, 2), t)
         @test isnothing(stop(t))
         @test isnothing(digital_input(t, dev*"/Port0/Line1"))
         @test isnothing(start(t))
         @test length(NIDAQ.read(t, 6)) == 12
+        buf2 = Matrix{UInt32}(undef, 6, 2)
+        @test read!(buf2, t) === buf2
+        buf3 = Matrix{UInt8}(undef, 4, 2)
+        @test read!(buf3, t) === buf3
+        @test_throws ArgumentError read!(Vector{UInt32}(undef, 6), t)
+        @test_throws ArgumentError read!(Matrix{UInt32}(undef, 6, 3), t)
         @test isnothing(stop(t))
         rslt = Ref{UInt32}(0)
         NIDAQ.DAQmxGetBufInputOnbrdBufSize(t.th, rslt)

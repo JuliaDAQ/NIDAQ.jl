@@ -75,6 +75,34 @@ function _read(t::Task, cfunction::F, ::Type{T}, num_samples::Integer) where {F,
     reshape(data, (Int(num_samples_read[]), Int(num_channels[])))
 end
 
+"""
+`read!(data, task) -> data`
+
+fill a preallocated vector or matrix with samples from all analog or digital
+input channels in a NIDAQ task.  the number of rows is the number of samples
+read per channel, and there must be one column per channel.  counter tasks
+are not supported, as some counter measurements yield two vectors.
+"""
+function Base.read!(data::VecOrMat{T}, t::Union{AITask,DITask}) where {T}
+    num_channels = Ref{Cuint}()
+    catch_error(DAQmxGetTaskNumChans(t.th, num_channels))
+    size(data, 2) == num_channels[] ||
+        throw(ArgumentError("`data` has $(size(data, 2)) columns but the task has $(num_channels[]) channels"))
+    num_samples = size(data, 1)
+    num_samples_read = Ref{Int32}(0)
+    catch_error( read_cfunction(t, T)(t.th,
+        Int32(num_samples),
+        1.0,
+        reinterpret(Bool32, Val_GroupByChannel),
+        data,
+        UInt32(length(data)),
+        num_samples_read,
+        reinterpret(Ptr{Bool32}, C_NULL)) )
+    num_samples_read[] == num_samples ||
+        error("NIDAQmx: read $(num_samples_read[]) of $num_samples samples per channel")
+    return data
+end
+
 function task(name::String)
     th = Ref{TaskHandle}(C_NULL)
     catch_error( DAQmxCreateTask(str2code(name), th) )
