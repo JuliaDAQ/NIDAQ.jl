@@ -15,6 +15,15 @@ const count_directions = (up = Val_CountUp, down = Val_CountDown)
 
 const time_units = (seconds = Val_Seconds, ticks = Val_Ticks)
 
+const angle_units = (ticks = Val_Ticks, degrees = Val_Degrees, radians = Val_Radians)
+
+const decodings = (x1 = Val_X1, x2 = Val_X2, x4 = Val_X4, two_pulse = Val_TwoPulseCounting)
+
+const z_index_phases = (a_high_b_high = Val_AHighBHigh, a_high_b_low = Val_AHighBLow,
+                        a_low_b_high  = Val_ALowBHigh,  a_low_b_low  = Val_ALowBLow)
+
+const idle_states = (low = Val_Low, high = Val_High)
+
 # translate a user-facing Symbol into the driver constant, naming the keyword
 # and listing the choices when it is not one of them
 function _lookup(table::NamedTuple, value::Symbol, what::AbstractString)

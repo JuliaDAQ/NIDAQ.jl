@@ -40,6 +40,10 @@ import LinearAlgebra
     @test NIDAQ._lookup(NIDAQ.terminal_configs, :default, "terminal_config") == NIDAQ.Val_Cfg_Default
     @test NIDAQ._lookup(NIDAQ.edges, :falling, "edge") == NIDAQ.Val_Falling
     @test NIDAQ._lookup(NIDAQ.time_units, :ticks, "units") == NIDAQ.Val_Ticks
+    @test NIDAQ._lookup(NIDAQ.angle_units, :degrees, "units") == NIDAQ.Val_Degrees
+    @test NIDAQ._lookup(NIDAQ.decodings, :x4, "decoding") == NIDAQ.Val_X4
+    @test NIDAQ._lookup(NIDAQ.z_index_phases, :a_low_b_high, "z_index_phase") == NIDAQ.Val_ALowBHigh
+    @test NIDAQ._lookup(NIDAQ.idle_states, :high, "idle_state") == NIDAQ.Val_High
     err = try NIDAQ._lookup(NIDAQ.edges, :sideways, "edge"); catch e; e; end
     @test err isa ArgumentError
     @test occursin(":rising", err.msg) && occursin(":falling", err.msg) && occursin(":sideways", err.msg)
@@ -310,6 +314,13 @@ end
         # signal connected stays at initial_count
         @test_throws ArgumentError count_edges(ch; edge=:sideways)
         @test_throws ArgumentError count_edges(ch; direction=:left)
+        # option checks precede the driver call, so these hold whether or not
+        # the device supports the measurement
+        @test_throws ArgumentError quadrature_input(ch; decoding=:x3)
+        @test_throws ArgumentError quadrature_input(ch; z_index_phase=:a_high)
+        @test_throws ArgumentError quadrature_input(ch; units=:gradians)
+        @test_throws ArgumentError line_to_line(ch; units=:minutes)
+        @test_throws ArgumentError generate_pulses(ch; idle_state=:middle)
         t = count_edges(ch; edge=:falling, direction=:up, initial_count=7)
         @test typeof(t) == NIDAQ.CITask
         @test channel_type(t, ch) == (NIDAQ.Val_CI, NIDAQ.Val_CountEdges)
