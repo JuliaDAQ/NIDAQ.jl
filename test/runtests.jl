@@ -30,10 +30,15 @@ import LinearAlgebra
     @test NIDAQ._decode(Int32(-987654)) === Int32(-987654)
     @test NIDAQ._decode(Cchar.(codeunits("a, b\0"))) == ["a", "b"]
 
-    # Bool32 is a 32-bit integer on the wire and a Bool once decoded
-    @test reinterpret(UInt32, reinterpret(Bool32, UInt32(1))) == 1
-    @test NIDAQ._decode(reinterpret(Bool32, UInt32(0))) === false
-    @test NIDAQ._decode(reinterpret(Bool32, UInt32(5))) === true
+    # Bool32 is a 32-bit integer on the wire and a Bool once decoded.  it is
+    # public but not exported
+    @test reinterpret(UInt32, reinterpret(NIDAQ.Bool32, UInt32(1))) == 1
+    @test NIDAQ._decode(reinterpret(NIDAQ.Bool32, UInt32(0))) === false
+    @test NIDAQ._decode(reinterpret(NIDAQ.Bool32, UInt32(5))) === true
+    @test !Base.isexported(NIDAQ, :Bool32)
+    @static if VERSION >= v"1.11"
+        @test Base.ispublic(NIDAQ, :Bool32)
+    end
 
     # enumerated options are lowercase Symbols mapped onto the driver's constants
     @test NIDAQ._lookup(NIDAQ.terminal_configs, :rse, "terminal_config") == NIDAQ.Val_RSE

@@ -345,7 +345,6 @@ julia> names(NIDAQ)
   :quadrature_input       
   :analog_input_channels  
   :analog_output          
-  :Bool32                 
   :clear                  
 ```
 

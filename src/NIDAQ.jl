@@ -42,12 +42,13 @@ const NIDAQmx = Sys.iswindows() ? "C:\\Windows\\System32\\nicaiu.dll" :
     "/usr/lib/x86_64-linux-gnu/libnidaqmx.so"
 const SafeCstring = Ref{UInt8}
 
+# the driver's bool32 is a 32-bit integer; a distinct type lets getproperties
+# tell boolean properties apart from unsigned ones
 primitive type Bool32<:Integer 32 end
-export Bool32
-
 
 @static if VERSION >= v"1.11"
-    eval(Expr(:public, :Task, :AITask, :AOTask, :DITask, :DOTask, :CITask, :COTask, :str2code))
+    eval(Expr(:public, :Task, :AITask, :AOTask, :DITask, :DOTask, :CITask, :COTask,
+                       :Bool32, :str2code))
 end
 
 try
