@@ -182,6 +182,17 @@ channels can be added later by inputing the returned `Task`:
 julia> analog_input(t, "Dev1/ai2")
 ```
 
+Keyword arguments choose the terminal configuration, the range of values
+expected, and whether voltage or current is measured:
+
+```
+julia> analog_input("Dev1/ai3"; terminal_config=:rse, range=[-5.0, 5.0], type=:voltage)
+```
+
+Throughout the high-level API such choices are lowercase Symbols, and an
+invalid one raises an `ArgumentError` listing the valid ones.  See the
+docstring of each function for its keywords.
+
 `getproperties` can also input a `Task`:
 
 ```
@@ -314,56 +325,85 @@ everything currently buffered in a continuous one, and use `read!(buffer, t)`
 to fill a preallocated matrix instead of allocating a new one.
 
 Similar work flows exist for `analog_output`, `digital_input`,
-and `digital_output`.  The high-level API also supports many counter
-functions too, including `count_edges` and `generate_pulses`.  For a
-full list of convenience functions use the `names` function in Julia Base:
+and `digital_output`.
+
+Counters are similar, except that a counter task holds a single channel,
+so there is no method which adds a channel to an existing task, and
+`read` takes no channel name:
 
 ```
-julia> names(NIDAQ)
-25-element Array{Symbol,1}:
-  :analog_output_channels 
-  :digital_input_channels 
-  :setproperty!           
-  :line_to_line           
-  :counter_input_channels 
-  :counter_output_channels
-  :NIDAQ                  
-  :analog_voltage_input_ranges    
-  :analog_current_input_ranges    
-  :digital_input          
-  :stop                   
-  :generate_pulses        
-  :count_edges            
-  :digital_output_channels
-  :analog_input           
-  :channel_type           
-  :analog_voltage_output_ranges   
-  :analog_current_output_ranges   
-  :devices                
-  :digital_output         
-  :getproperties          
-  :quadrature_input       
-  :analog_input_channels  
-  :analog_output          
-  :clear                  
+julia> t = count_edges("Dev1/ctr0"; edge=:falling, direction=:up, initial_count=7)
+NIDAQ.CITask(Ptr{Nothing} @0x0000000005a1c2e0)
+
+julia> start(t)
+
+julia> read(t)
+1-element Vector{UInt32}:
+ 0x00000007
+
+julia> clear(t)
 ```
+
+The other counter functions are `quadrature_input`, `line_to_line`, and
+`generate_pulses`:
+
+```
+julia> t = generate_pulses("Dev1/ctr0"; units=:ticks, low=50, high=50, idle_state=:high)
+```
+
+For a full list of high-level functions:
+
+```
+julia> filter(s -> Base.isexported(NIDAQ, s), names(NIDAQ))
+28-element Vector{Symbol}:
+ :NIDAQ
+ :acceleration_input
+ :analog_current_input_ranges
+ :analog_current_output_ranges
+ :analog_input
+ :analog_input_channels
+ :analog_input_ranges
+ :analog_output
+ :analog_output_channels
+ :analog_output_ranges
+ :analog_voltage_input_ranges
+ :analog_voltage_output_ranges
+ :channel_type
+ :clear
+ :count_edges
+ :counter_input_channels
+ :counter_output_channels
+ :devices
+ :digital_input
+ :digital_input_channels
+ :digital_output
+ :digital_output_channels
+ :generate_pulses
+ :getproperties
+ :line_to_line
+ :quadrature_input
+ :start
+ :stop
+```
+
+`read`, `read!`, `write`, `getproperty`, `setproperty!`, `close`, and
+`isopen` extend the functions of the same name in Julia Base and so are
+not listed.  Plain `names(NIDAQ)` also returns the thousands of low-level
+wrappers described next, which are public but not exported.
 
 NIDAQmx is a powerful interface, and while NIDAQ.jl provides wrappers
-for all of it's functions, it only abstracts a few of them.  If these
+for all of its functions, it only abstracts a few of them.  If these
 don't suit your needs you'll have to dive deep into `src/functions_V*.jl`
 and `src/constants_V*.jl`.  Complete documentation of this low-level API
 is [here](http://zone.ni.com/reference/en-XX/help/370466V-01/) and
 [here](http://zone.ni.com/reference/en-XX/help/370471W-01/).
 
 One situation where the low-level API is needed is to specify
-continous output of pulses using a counter:
+continuous output of pulses using a counter:
 
 ```
 julia> t = generate_pulses("Dev1/ctr0")
 NIDAQ.COTask(Ptr{Nothing} @0x00000000059d8790)
-
-julia> fieldnames(typeof(t))
-(:th,)
 
 julia> NIDAQ.CfgImplicitTiming(t.th, NIDAQ.Val_ContSamps, UInt64(1))
 0
@@ -374,7 +414,7 @@ handle" is what must be passed into many low-level routines.
 
 Also, for brevity NIDAQ.jl strips the "DAQmx" prefix to all functions and
 constants in NI-DAQmx, and converts the latter to 32 bits.  One must still
-take care to caste the other inputs appropriately though.
+take care to cast the other inputs appropriately though.
 
 
 Adding Support for a Version of NI-DAQmx
