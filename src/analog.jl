@@ -158,15 +158,23 @@ function analog_output(t::AOTask, channel::String; range=nothing)
     nothing
 end
 
-read_analog_cfunctions = Dict{Type,Function}(
-    Float64 => ReadAnalogF64,
-    Int16   => ReadBinaryI16,
-    Int32   => ReadBinaryI32,
-    UInt16  => ReadBinaryU16,
-    UInt32  => ReadBinaryU32 )
+# which driver function reads samples of a given element type.  dispatching on
+# the type, rather than looking it up in a Dict, lets the compiler infer the
+# return type of read
+for (cfunction, T) in (
+        (ReadAnalogF64, Float64),
+        (ReadBinaryI16, Int16),
+        (ReadBinaryI32, Int32),
+        (ReadBinaryU16, UInt16),
+        (ReadBinaryU32, UInt32))
+    @eval read_cfunction(::AITask, ::Type{$T}) = $cfunction
+end
+read_cfunction(::AITask, ::Type{T}) where T =
+    throw(ArgumentError("analog input can be read as Float64, Int16, Int32, UInt16, or UInt32, not $T"))
 
-Base.read(t::AITask, num_samples_per_chan::Integer = -1, precision::DataType = Float64) =
-    _read(t, read_analog_cfunctions[precision], precision, num_samples_per_chan)
+Base.read(t::AITask, num_samples_per_chan::Integer = -1, ::Type{T} = Float64) where T =
+    _read(t, read_cfunction(t, T), T, num_samples_per_chan)
+
 function Base.read!(data::VecOrMat{T}, t::AITask) where {T}
     outdata_ref = Ref{Cuint}()
     DAQmxGetTaskNumChans(t.th, outdata_ref)
@@ -174,7 +182,7 @@ function Base.read!(data::VecOrMat{T}, t::AITask) where {T}
     outdata_ref.x == num_channels || throw(ArgumentError("`data` has $num_channels columns but the task has $(outdata_ref.x) channels"))
     num_samples_per_chan = size(data, 1)
     num_samples_per_chan_read = Int32[0]
-    catch_error( read_analog_cfunctions[T](t.th,
+    catch_error( read_cfunction(t, T)(t.th,
         convert(Int32, num_samples_per_chan),
         1.0,
         reinterpret(Bool32,Val_GroupByChannel),

@@ -308,6 +308,11 @@ julia> read(t, 10, Int16)
  -12620  -5350  -13973
 ```
 
+The result is always a matrix with one column per channel.  Omit the number
+of samples, as in `read(t)`, to get every sample of a finite acquisition or
+everything currently buffered in a continuous one, and use `read!(buffer, t)`
+to fill a preallocated matrix instead of allocating a new one.
+
 Similar work flows exist for `analog_output`, `digital_input`,
 and `digital_output`.  The high-level API also supports many counter
 functions too, including `count_edges` and `generate_pulses`.  For a

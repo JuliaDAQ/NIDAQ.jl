@@ -55,8 +55,9 @@ function auto_samples(t::Task)
 end
 
 # read `num_samples` per channel from every channel of a task into a freshly
-# allocated matrix, one column per channel
-function _read(t::Task, cfunction::Function, ::Type{T}, num_samples::Integer) where T
+# allocated matrix, one column per channel.  a single channel yields a matrix
+# with one column, so the return type does not depend on the task
+function _read(t::Task, cfunction::F, ::Type{T}, num_samples::Integer) where {F,T}
     num_channels = Ref{Cuint}()
     catch_error(DAQmxGetTaskNumChans(t.th, num_channels))
     n = num_samples == -1 ? auto_samples(t) : Int(num_samples)
@@ -71,7 +72,7 @@ function _read(t::Task, cfunction::Function, ::Type{T}, num_samples::Integer) wh
         num_samples_read,
         reinterpret(Ptr{Bool32}, C_NULL)) )
     resize!(data, num_samples_read[]*num_channels[])
-    num_channels[] == 1 ? data : reshape(data, (num_samples_read[], Int(num_channels[])))
+    reshape(data, (Int(num_samples_read[]), Int(num_channels[])))
 end
 
 function task(name::String)

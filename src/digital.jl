@@ -31,13 +31,17 @@ create a digital output channel, and a new NIDAQ task if one is not specified
 create a digital input channel, and a new task if one is not specified
 """ digital_input
 
-read_digital_cfunctions = Dict{Type,Function}(
-    UInt8 => ReadDigitalU8,
-    UInt16 => ReadDigitalU16,
-    UInt32 => ReadDigitalU32 )
+for (cfunction, T) in (
+        (ReadDigitalU8,  UInt8),
+        (ReadDigitalU16, UInt16),
+        (ReadDigitalU32, UInt32))
+    @eval read_cfunction(::DITask, ::Type{$T}) = $cfunction
+end
+read_cfunction(::DITask, ::Type{T}) where T =
+    throw(ArgumentError("digital input can be read as UInt8, UInt16, or UInt32, not $T"))
 
-Base.read(t::DITask, num_samples_per_chan::Integer = -1, precision::DataType = UInt32) =
-    _read(t, read_digital_cfunctions[precision], precision, num_samples_per_chan)
+Base.read(t::DITask, num_samples_per_chan::Integer = -1, ::Type{T} = UInt32) where T =
+    _read(t, read_cfunction(t, T), T, num_samples_per_chan)
     
 for (cfunction, types) in (
         (WriteDigitalU8,  UInt8),

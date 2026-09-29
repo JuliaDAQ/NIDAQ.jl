@@ -98,6 +98,11 @@ end
         @test_throws ArgumentError getproperty(t, dev*"/ai0", "Maxx")
         @test start(t) == nothing
         @test length(NIDAQ.read(t, 3)) == 3
+        # the return type is inferable and does not depend on the channel count
+        @test (@inferred NIDAQ.read(t, 3)) isa Matrix{Float64}
+        @test (@inferred NIDAQ.read(t, 3, Int16)) isa Matrix{Int16}
+        @test size(NIDAQ.read(t, 3)) == (3, 1)
+        @test_throws ArgumentError NIDAQ.read(t, 3, Float32)
         buf1 = Vector{Float64}(undef, 3)
         @test read!(buf1, t) === buf1
         @test all(isfinite, buf1)
@@ -162,6 +167,8 @@ end
         @test typeof(t) == NIDAQ.DITask
         @test start(t) == nothing
         @test length(NIDAQ.read(t, 3)) == 3
+        @test (@inferred NIDAQ.read(t, 3)) isa Matrix{UInt32}
+        @test (@inferred NIDAQ.read(t, 3, UInt8)) isa Matrix{UInt8}
         @test stop(t) == nothing
         @test digital_input(t, dev*"/Port0/Line1") == nothing
         @test start(t) == nothing

@@ -124,7 +124,7 @@ function generate_pulses(channel::String; low::T=2, high::T=2, delay::T=0) where
     t
 end
 
-"""`read(task,channel; nsamples=-1) -> Vector[, Vector]`
+"""`read(task,channel; num_samples=-1) -> Vector[, Vector]`
 
 receive data from the specified counter channel in the specified NIDAQ task
 """
@@ -139,9 +139,9 @@ function Base.read(t::CITask, channel::String; num_samples::Integer = -1)
     #    data
     #end
 
-    function read_counter_vector(precision::DataType, cfunction::Function)
+    function read_counter_vector(::Type{T}, cfunction::Function) where T
         num_samples_read = Int32[0]
-        data = Vector{precision}(undef, num_samples)
+        data = Vector{T}(undef, num_samples)
         catch_error( cfunction(t.th,
             convert(Int32,num_samples),
             1.0,
@@ -152,10 +152,10 @@ function Base.read(t::CITask, channel::String; num_samples::Integer = -1)
         resize!(data, num_samples_read[1])
     end
 
-    function read_counter_2vectors(precision::DataType, cfunction::Function)
+    function read_counter_2vectors(::Type{T}, cfunction::Function) where T
         num_samples_read = Int32[0]
-        high = Vector{precision}(undef, num_samples)
-        low = Vector{precision}(undef, num_samples)
+        high = Vector{T}(undef, num_samples)
+        low = Vector{T}(undef, num_samples)
         catch_error( cfunction(t.th,
             convert(Int32,num_samples),
             1.0,
@@ -189,7 +189,11 @@ function Base.read(t::CITask, channel::String; num_samples::Integer = -1)
         elseif val[1] == Val_Seconds
             data = read_counter_vector(Float64, ReadCounterF64)
             #data = read_counter_scalar(Float64, ReadCounterScalarF64)
+        else
+            error("unsupported two-edge separation units $(val[1])")
         end
+    else
+        error("unsupported counter measurement type $(tmp[2])")
     end
     data
 end
