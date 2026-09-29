@@ -7,6 +7,7 @@ for their data acquisition boards.  See the README.md for documentation.
 t = analog_input("Dev1/ai0:1")
 getproperties(t)
 setproperty!(t, "Dev1/ai0", "Max", 5.0)
+getproperty(t, "Dev1/ai0", "Max")
 start(t)
 read(t, 10)
 stop(t)
@@ -72,8 +73,49 @@ catch
   error("NIDAQmx version $ver is not supported.")
 end
 
-unsigned_constants = Dict{UInt64,Symbol}()
-signed_constants = Dict{Int64,Symbol}()
+const unsigned_constants = Dict{UInt64,Symbol}()
+const signed_constants = Dict{Int64,Symbol}()
+
+# NI-DAQmx exposes properties through getter/setter pairs named
+# DAQmxGet<group><property> and DAQmxSet<group><property>.  the table below is
+# built once, when the module loads, so that getproperties does not have to
+# scan every wrapper on every call.
+struct PropertyInfo
+    name::String                      # e.g. "Max"
+    getter::Function                  # e.g. DAQmxGetAIMax
+    setter::Union{Function,Nothing}   # e.g. DAQmxSetAIMax, or nothing if read-only
+    eltype::Type                      # type of the value, e.g. Float64, or Cchar for strings
+    scalar::Bool                      # true: one Ref out-arg;  false: buffer plus size
+end
+
+# group => number of arguments the caller supplies before the out-arg
+const property_groups = ("Sys" => 0, "Dev" => 1, "Task" => 1,
+                         "AI" => 2, "AO" => 2, "DI" => 2, "DO" => 2, "CI" => 2, "CO" => 2)
+const property_table = Dict(g => Dict{String,PropertyInfo}() for (g, _) in property_groups)
+
+# the generated wrappers are a single ccall, so its argument types can be read
+# from the lowered code.  this is the only place which depends on that layout.
+ccall_argtypes(f::Function) = code_lowered(f)[1].code[end-1].args[3]
+
+function register_property!(sym::Symbol, getter::Function)
+    name = String(sym)
+    startswith(name, "DAQmxGet") || return
+    rest = name[9:end]
+    for (group, nargs) in property_groups
+        startswith(rest, group) || continue
+        argtypes = ccall_argtypes(getter)
+        # only getters shaped (args..., out) or (args..., out, size) are properties
+        length(argtypes) in (nargs+1, nargs+2) || return
+        out = argtypes[nargs+1]
+        out isa Type && out <: Union{Ptr,Ref} || return
+        setsym = Symbol("DAQmxSet" * rest)
+        setter = isdefined(NIDAQ, setsym) ? getfield(NIDAQ, setsym) : nothing
+        pname = rest[length(group)+1:end]
+        property_table[group][pname] =
+            PropertyInfo(pname, getter, setter, eltype(out), length(argtypes) == nargs+1)
+        return
+    end
+end
 
 public_names = Symbol[]
 for sym in names(NIDAQ, all=true)
@@ -82,18 +124,20 @@ for sym in names(NIDAQ, all=true)
     (length(sym_str)<5 || sym_str[1:5]!="DAQmx") && continue
     sym_str = sym_str[6:end]
     sym_str[1]=='_' && (sym_str = sym_str[2:end])
-    if @eval typeof($sym) <: Unsigned
+    val = getfield(NIDAQ, sym)
+    if val isa Unsigned
         @eval const $(Symbol(sym_str)) = UInt32($sym)
-        unsigned_constants[eval(:($sym))] = Symbol(sym_str)
+        unsigned_constants[val] = Symbol(sym_str)
         push!(public_names, Symbol(sym_str))
-    elseif @eval typeof($sym) <: Signed
+    elseif val isa Signed
         sym_str[1:min(end,4)]=="Val_" || continue
         @eval const $(Symbol(sym_str)) = convert(Int32,$sym)
-        signed_constants[eval(:($sym))] = Symbol(sym_str)
+        signed_constants[val] = Symbol(sym_str)
         push!(public_names, Symbol(sym_str))
-    elseif eval(:(typeof($sym)<:Function))
+    elseif val isa Function
         @eval const $(Symbol(sym_str)) = $sym
         push!(public_names, Symbol(sym_str))
+        register_property!(sym, val)
     end
 end
 # convert a NUL-terminated buffer filled in by the driver to a String

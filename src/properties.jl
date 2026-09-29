@@ -90,70 +90,57 @@ function channel_type(t::Task, channel::String)
     val1[1], val2[1]
 end
 
-function _getproperties(args, suffix::String, warning::Bool)
-    ret_val = Dict{String,Tuple{Any,Bool}}()
-    local settable
-    local data
-    local ret
-    for sym in names(NIDAQ, all=true)
-        eval(:(!(typeof(NIDAQ.$sym) <:Function))) && continue
-        if string(sym)[1:min(end,8+length(suffix))]=="DAQmxGet"*suffix
-            cfunction = getfield(NIDAQ, sym)
-            ccall_args = code_lowered(cfunction)[1].code[end-1].args[3]
-            try
-                basetype = eltype(ccall_args[1+length(args)])
-                if length(ccall_args)==1+length(args)
-                    data = Ref{basetype}(0)
-                    ret = cfunction(args..., data)
-                    data = data[]
-                else
-                    sz = cfunction(args..., convert(Ptr{basetype},C_NULL), convert(UInt32,0))
-                    if sz<0
-                      ret=sz
-                      throw()
-                    end
-                    data = zeros(basetype,sz)
-                    ret = cfunction(args..., Ref(data,1), convert(UInt32,sz))
-                end
-                if ret!=0
-                    throw()
-                elseif basetype == Bool32
-                    data = reinterpret(UInt32, data) != 0
-                elseif basetype == Int32
-                    try
-                        data = map((x)->signed_constants[x], data)
-                    catch
-                    end
-                elseif basetype == UInt32
-                    try
-                        data = map((x)->unsigned_constants[x], data)
-                    catch
-                    end
-                elseif basetype == Int8
-                    data = split(cstring(data), ", ")
+# map raw driver values onto something friendlier: named constants for
+# enumerations, Bool for bool32, and a list of strings for comma-separated lists
+_decode(x::Bool32) = reinterpret(UInt32, x) != 0
+_decode(x::Int32) = get(signed_constants, x, x)
+_decode(x::UInt32) = get(unsigned_constants, x, x)
+_decode(v::Vector{Int32}) = all(x -> haskey(signed_constants, x), v) ? map(x -> signed_constants[x], v) : v
+_decode(v::Vector{UInt32}) = all(x -> haskey(unsigned_constants, x), v) ? map(x -> unsigned_constants[x], v) : v
+_decode(v::Vector{<:Union{Int8,UInt8}}) = split(cstring(v), ", ")
+_decode(x) = x
 
-                end
-            catch
-                if warning
-                    if ret!=0
-                        catch_error(ret, string(cfunction)*": ", err_fcn=x->@warn(x))
-                    else
-                        @warn("can't handle function signature for $cfunction: $ccall_args")
-                    end
-                end
-                continue
-            end
-            try
-                getfield(NIDAQ, Symbol(replace(string(cfunction),"Get"*suffix =>"Set"*suffix)))
-                settable=true
-            catch
-                settable=false
-            end
-	        n_skip = VERSION >= v"1.2" ? 9 : 15
-            ret_val[string(cfunction)[n_skip+length(suffix):end]] = (data, settable)
+function _check(ret::Int32, p::PropertyInfo)
+    ret == 0 && return nothing
+    ret < 0 && catch_error(ret, string(p.getter) * ": ")   # throws
+    # positive codes are warnings, but the value is still not usable
+    error("$(p.getter): NIDAQmx warning $ret")
+end
+
+# read one property.  `args` are the leading arguments of the getter: nothing
+# for system properties, the device name or task handle for those, and the
+# task handle plus channel name for channel properties
+function _getproperty(args, p::PropertyInfo)
+    T = p.eltype
+    if p.scalar
+        ref = Ref{T}()
+        _check(p.getter(args..., ref), p)
+        data = ref[]
+    else
+        sz = p.getter(args..., Ptr{T}(C_NULL), UInt32(0))
+        _check(sz < 0 ? sz : Int32(0), p)
+        data = Vector{T}(undef, sz)
+        _check(p.getter(args..., data, UInt32(sz)), p)
+    end
+    _decode(data)
+end
+
+function _getproperties(args, group::String, warning::Bool)
+    result = Dict{String,Tuple{Any,Bool}}()
+    for (name, p) in property_table[group]
+        try
+            result[name] = (_getproperty(args, p), p.setter !== nothing)
+        catch e
+            warning && @warn "$(p.getter): $(sprint(showerror, e))"
         end
     end
-    ret_val
+    result
+end
+
+function _property(group::String, name::String)
+    p = get(property_table[group], name, nothing)
+    p === nothing && throw(ArgumentError("no property \"$name\" for $group"))
+    p
 end
 
 """
@@ -183,9 +170,9 @@ function getproperties(t::Task; warning=false)
     _getproperties((t.th,), "Task", warning)
 end
 
-channel_types = ["Val_AI", "Val_AO",
-                 "Val_DI", "Val_DO",
-                 "Val_CI", "Val_CO"]
+const channel_kinds = Dict(Val_AI => "AI", Val_AO => "AO", Val_DI => "DI",
+                           Val_DO => "DO", Val_CI => "CI", Val_CO => "CO")
+channel_kind(t::Task, channel::String) = channel_kinds[channel_type(t, channel)[1]]
 
 """
 `getproperties(task,channel; warning=false) -> Dict`
@@ -193,10 +180,17 @@ channel_types = ["Val_AI", "Val_AO",
 get the properties of the specified NIDAQ channel
 """
 function getproperties(t::Task, channel::String; warning=false)
-    kind = channel_types[ findall(channel_type(t, channel)[1] .==
-            map((x)->getfield(NIDAQ,Symbol(x)), channel_types))[1]][end-1:end]
+    _getproperties((t.th, str2code(channel)), channel_kind(t, channel), warning)
+end
 
-    _getproperties((t.th, str2code(channel)), kind, warning)
+"""
+`getproperty(task,channel,property) -> value`
+
+get the specified NIDAQ property of a channel
+"""
+function Base.getproperty(t::Task, channel::String, property::String)
+    kind = channel_kind(t, channel)
+    _getproperty((t.th, str2code(channel)), _property(kind, property))
 end
 
 """
@@ -205,13 +199,9 @@ end
 set the specified NIDAQ property to value
 """
 function Base.setproperty!(t::Task, channel::String, property::String, value)
-    kind = channel_types[ findall(channel_type(t, channel)[1] .==
-            map((x)->getfield(NIDAQ,Symbol(x)), channel_types))[1]][end-1:end]
-
-    sym = Symbol("DAQmxSet"*kind*property)
-    isdefined(NIDAQ, sym) || throw(ArgumentError("no settable property \"$property\" for $kind channels"))
-    cfunction = getfield(NIDAQ, sym)
-    ret = cfunction(t.th, str2code(channel), value)
-    catch_error(ret, "DAQmxSet$kind$property: ")
+    kind = channel_kind(t, channel)
+    p = _property(kind, property)
+    p.setter === nothing && throw(ArgumentError("property \"$property\" of $kind channels is read-only"))
+    catch_error(p.setter(t.th, str2code(channel), value), "DAQmxSet$kind$property: ")
     nothing
 end

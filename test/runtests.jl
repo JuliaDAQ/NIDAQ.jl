@@ -4,6 +4,7 @@ import LinearAlgebra
 @testset "installation" begin
 @test typeof(getproperties()) == Dict{String,Tuple{Any,Bool}}
 @test haskey(getproperties(), "NIDAQMajorVersion")
+@test (@elapsed getproperties()) < 0.5   # the property table is built at load, not per call
 end
 
 @testset "device" begin
@@ -18,6 +19,7 @@ end
         global props = getproperties(dev)
 
         @test typeof(getproperties(dev)) == Dict{String,Tuple{Any,Bool}}
+        @test (@elapsed getproperties(dev)) < 2.0   # dominated by USB round trips, not reflection
         @test typeof(analog_input_channels(dev)) == Vector{String}
         @test typeof(analog_output_channels(dev)) == Vector{String}
         @test typeof(digital_input_channels(dev)) == Vector{String}
@@ -90,7 +92,10 @@ end
         @test setproperty!(t, dev*"/ai0", "Max", 5.0) === nothing
         @test setproperty!(t, dev*"/ai0", "TermCfg", NIDAQ.Val_RSE) === nothing
         @test getproperties(t, dev*"/ai0")["TermCfg"] == (:Val_RSE, true)
+        @test getproperty(t, dev*"/ai0", "TermCfg") == :Val_RSE
+        @test getproperty(t, dev*"/ai0", "Max") isa Float64
         @test_throws ArgumentError setproperty!(t, dev*"/ai0", "Maxx", 5.0)
+        @test_throws ArgumentError getproperty(t, dev*"/ai0", "Maxx")
         @test start(t) == nothing
         @test length(NIDAQ.read(t, 3)) == 3
         buf1 = Vector{Float64}(undef, 3)

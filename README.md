@@ -253,11 +253,19 @@ Dict{String,Tuple{Any,Bool}} with 52 entries:
   "VoltagedBRef"                      => (1.0,false)
 ```
 
-Use `setproperty!` to change a mutable property:
+Use `setproperty!` to change a mutable property, and `getproperty` to read a
+single one back without fetching all of them:
 
 ```
 julia> setproperty!(t, "Dev1/ai0", "Max", 5.0)
+
+julia> getproperty(t, "Dev1/ai0", "Max")
+5.0
 ```
+
+(Note that when queried, `Max` and `Min` are reported coerced to the closest
+range the device supports, so on a device with only a ±10 V range the above
+returns 10.0.)
 
 Once everything is configured, get some data using the `read` function:
 
