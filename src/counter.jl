@@ -1,25 +1,20 @@
 """
-`count_edges(channel; edge="rising", initial_count=0, direction="up") -> task`
+`count_edges(channel; edge=:rising, initial_count=0, direction=:up) -> task`
 
-create a NIDAQ counter input channel which counts edges.  a counter task holds
-a single channel, so unlike the analog and digital constructors there is no
-method which adds a channel to an existing task.
+create a NIDAQ counter input channel which counts edges.  edge is :rising or
+:falling, and direction is :up or :down.  a counter task holds a single
+channel, so unlike the analog and digital constructors there is no method
+which adds a channel to an existing task.
 """
 function count_edges(channel::String;
-        edge::AbstractString="rising", initial_count::Integer=0, direction::AbstractString="up")
+        edge::Symbol=:rising, initial_count::Integer=0, direction::Symbol=:up)
     t = CITask()
-    if edge ∉ ("rising", "falling")
-        error("edge must either be \"rising\" or \"falling\"")
-    end
-    if direction ∉ ("up", "down")
-        error("direction must either be \"up\" or \"down\"")
-    end
     catch_error( CreateCICountEdgesChan(t.th,
         str2code(channel),
         str2code(""),
-        edge == "rising" ? Val_Rising : Val_Falling,
+        _lookup(edges, edge, "edge"),
         UInt32(initial_count),
-        direction == "up" ? Val_CountUp : Val_CountDown) )
+        _lookup(count_directions, direction, "direction")) )
     t
 end
 
@@ -69,65 +64,59 @@ function quadrature_input(channel::String; z_enable::Bool=true)
 end
 
 """
-`line_to_line(channel; units="seconds", edge1="rising", edge2="rising") -> task`
+`line_to_line(channel; units=:seconds, edge1=:rising, edge2=:rising) -> task`
 
 create a NIDAQ counter input channel which measures the separation between two
-edges.  a counter task holds a single channel, so unlike the analog and digital
-constructors there is no method which adds a channel to an existing task.
+edges.  units is :seconds or :ticks, and edge1 and edge2 are :rising or
+:falling.  a counter task holds a single channel, so unlike the analog and
+digital constructors there is no method which adds a channel to an existing
+task.
 """
 function line_to_line(channel::String;
-        units::AbstractString="seconds", edge1::AbstractString="rising", edge2::AbstractString="rising")
+        units::Symbol=:seconds, edge1::Symbol=:rising, edge2::Symbol=:rising)
     t = CITask()
-    if units ∉ ("seconds", "ticks")
-        error("units must either be \"seconds\" or \"ticks\"")
-    end
-    if edge1 ∉ ("rising", "falling")
-        error("edge1 must either be \"rising\" or \"falling\"")
-    end
-    if edge2 ∉ ("rising", "falling")
-        error("edge2 must either be \"rising\" or \"falling\"")
-    end
     catch_error( CreateCITwoEdgeSepChan(t.th,
             str2code(channel),
             str2code(""),
-            1.0, 1000.0, 
-            units == "seconds" ? Val_Seconds : Val_Ticks,
-            edge1 == "rising" ? Val_Rising : Val_Falling,
-            edge2 == "rising" ? Val_Rising : Val_Falling,
+            1.0, 1000.0,
+            _lookup(time_units, units, "units"),
+            _lookup(edges, edge1, "edge1"),
+            _lookup(edges, edge2, "edge2"),
             str2code("")) )
     t
 end
 
 """
-`generate_pulses(channel; low=2, high=2, delay=0) -> task`
+`generate_pulses(channel; units=:seconds, low=2, high=2, delay=0) -> task`
 
 create a NIDAQ counter output channel which generates pulses.  low, high, and
-delay are in seconds if floating point and in timebase ticks if integer.  a
+delay are the durations of the low and high phases and of the initial delay,
+in seconds if units is :seconds or in timebase ticks if units is :ticks.  a
 counter task holds a single channel, so unlike the analog and digital
 constructors there is no method which adds a channel to an existing task.
 """
-function generate_pulses(channel::String; low::T=2, high::T=2, delay::T=0) where T<:Number
+function generate_pulses(channel::String; units::Symbol=:seconds,
+        low::Real=2, high::Real=2, delay::Real=0)
+    _lookup(time_units, units, "units")
     t = COTask()
-    if T<:AbstractFloat
+    if units == :seconds
         ret = CreateCOPulseChanTime(t.th,
                 str2code(channel),
                 str2code(""),
                 Val_Seconds,
                 Val_Low,
-                convert(Float64,delay),
-                convert(Float64,low),
-                convert(Float64,high))
-    elseif T<:Integer
+                Float64(delay),
+                Float64(low),
+                Float64(high))
+    else
         ret = CreateCOPulseChanTicks(t.th,
                 str2code(channel),
                 str2code(""),
                 str2code(""),
                 Val_Low,
-                convert(Int32,delay),
-                convert(Int32,low),
-                convert(Int32,high))
-    else
-        error("low, high, and delay must either be \"FloatingPoint\" or \"Integer\"")
+                Int32(delay),
+                Int32(low),
+                Int32(high))
     end
     catch_error(ret)
     t

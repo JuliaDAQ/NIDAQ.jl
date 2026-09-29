@@ -38,8 +38,6 @@ export analog_input_channels,           analog_output_channels
 export digital_input_channels,          digital_output_channels
 export counter_input_channels,          counter_output_channels
 
-export RSE, NRSE, Differential, PseudoDifferential
-
 const NIDAQmx = Sys.iswindows() ? "C:\\Windows\\System32\\nicaiu.dll" :
     "/usr/lib/x86_64-linux-gnu/libnidaqmx.so"
 const SafeCstring = Ref{UInt8}
@@ -174,6 +172,7 @@ function catch_error(code::Int32, extra::String=""; err_fcn=error)
 end
 
 include("task.jl")
+include("options.jl")
 include("analog.jl")
 include("digital.jl")
 include("counter.jl")

@@ -35,11 +35,14 @@ import LinearAlgebra
     @test NIDAQ._decode(reinterpret(Bool32, UInt32(0))) === false
     @test NIDAQ._decode(reinterpret(Bool32, UInt32(5))) === true
 
-    # terminal configurations map onto the driver's constants
-    @test Integer(RSE) == NIDAQ.Val_RSE
-    @test Integer(NRSE) == NIDAQ.Val_NRSE
-    @test Integer(Differential) == NIDAQ.Val_Diff
-    @test Integer(PseudoDifferential) == NIDAQ.Val_PseudoDiff
+    # enumerated options are lowercase Symbols mapped onto the driver's constants
+    @test NIDAQ._lookup(NIDAQ.terminal_configs, :rse, "terminal_config") == NIDAQ.Val_RSE
+    @test NIDAQ._lookup(NIDAQ.terminal_configs, :default, "terminal_config") == NIDAQ.Val_Cfg_Default
+    @test NIDAQ._lookup(NIDAQ.edges, :falling, "edge") == NIDAQ.Val_Falling
+    @test NIDAQ._lookup(NIDAQ.time_units, :ticks, "units") == NIDAQ.Val_Ticks
+    err = try NIDAQ._lookup(NIDAQ.edges, :sideways, "edge"); catch e; e; end
+    @test err isa ArgumentError
+    @test occursin(":rising", err.msg) && occursin(":falling", err.msg) && occursin(":sideways", err.msg)
 
     # the property table was built at load time
     p = NIDAQ.property_table["AI"]["Max"]
@@ -169,7 +172,10 @@ end
         @test all(isfinite, buf1)
         @test_throws ArgumentError read!(Matrix{Float64}(undef, 3, 2), t)
         @test isnothing(stop(t))
-        @test isnothing(analog_input(t, dev*"/ai1"))
+        @test isnothing(analog_input(t, dev*"/ai1"; terminal_config=:rse))
+        @test getproperty(t, dev*"/ai1", "TermCfg") == :Val_RSE
+        @test_throws ArgumentError analog_input(dev*"/ai0"; terminal_config=:sideways)
+        @test_throws ArgumentError analog_input(dev*"/ai0"; type=:resistance)
         @test isnothing(start(t))
         @test length(NIDAQ.read(t, 6, UInt32)) == 12
         buf2 = Matrix{Float64}(undef, 6, 2)
@@ -302,7 +308,9 @@ end
 
         # count edges: on-demand reads return the running count, which with no
         # signal connected stays at initial_count
-        t = count_edges(ch; initial_count=7)
+        @test_throws ArgumentError count_edges(ch; edge=:sideways)
+        @test_throws ArgumentError count_edges(ch; direction=:left)
+        t = count_edges(ch; edge=:falling, direction=:up, initial_count=7)
         @test typeof(t) == NIDAQ.CITask
         @test channel_type(t, ch) == (NIDAQ.Val_CI, NIDAQ.Val_CountEdges)
         @test isnothing(start(t))
