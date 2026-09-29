@@ -1,6 +1,54 @@
 using NIDAQ, Test
 import LinearAlgebra
 
+@testset "no hardware needed" begin
+    # str2code yields a NUL-terminated buffer of Cchar
+    @test NIDAQ.str2code("Dev1").x == Cchar.(codeunits("Dev1\0"))
+    @test NIDAQ.str2code("").x == Cchar[0]
+
+    # cstring stops at the first NUL and tolerates its absence
+    @test NIDAQ.cstring(Cchar[]) == ""
+    @test NIDAQ.cstring(Cchar.(codeunits("abc\0xyz"))) == "abc"
+    @test NIDAQ.cstring(Cchar.(codeunits("abc"))) == "abc"
+
+    # the aliasing loop strips the DAQmx prefix, converts constants to 32 bits,
+    # and makes everything const
+    @test NIDAQ.Val_Rising == NIDAQ.DAQmx_Val_Rising
+    @test NIDAQ.AI_Max == NIDAQ.DAQmx_AI_Max
+    @test NIDAQ.CfgSampClkTiming === NIDAQ.DAQmxCfgSampClkTiming
+    @test isconst(NIDAQ, :Val_Rising) && isconst(NIDAQ, :CfgSampClkTiming)
+    @test NIDAQ.Val_Rising isa Int32
+    @test NIDAQ.AI_Max isa UInt32
+    @static if VERSION >= v"1.11"
+        @test Base.ispublic(NIDAQ, :CfgSampClkTiming) && !Base.isexported(NIDAQ, :CfgSampClkTiming)
+    end
+
+    # named constants round trip through the decoding used by getproperties.
+    # several constants share a value, so compare values rather than names
+    @test getfield(NIDAQ, NIDAQ._decode(Int32(NIDAQ.Val_Rising))) == NIDAQ.Val_Rising
+    @test getfield(NIDAQ, NIDAQ._decode(NIDAQ.AI_Max)) == NIDAQ.AI_Max
+    @test NIDAQ._decode(Int32(-987654)) === Int32(-987654)
+    @test NIDAQ._decode(Cchar.(codeunits("a, b\0"))) == ["a", "b"]
+
+    # Bool32 is a 32-bit integer on the wire and a Bool once decoded
+    @test reinterpret(UInt32, reinterpret(Bool32, UInt32(1))) == 1
+    @test NIDAQ._decode(reinterpret(Bool32, UInt32(0))) === false
+    @test NIDAQ._decode(reinterpret(Bool32, UInt32(5))) === true
+
+    # terminal configurations map onto the driver's constants
+    @test Integer(RSE) == NIDAQ.Val_RSE
+    @test Integer(NRSE) == NIDAQ.Val_NRSE
+    @test Integer(Differential) == NIDAQ.Val_Diff
+    @test Integer(PseudoDifferential) == NIDAQ.Val_PseudoDiff
+
+    # the property table was built at load time
+    p = NIDAQ.property_table["AI"]["Max"]
+    @test p.getter === NIDAQ.DAQmxGetAIMax && p.setter === NIDAQ.DAQmxSetAIMax
+    @test p.eltype === Float64 && p.scalar
+    p = NIDAQ.property_table["Sys"]["DevNames"]
+    @test isnothing(p.setter) && p.eltype === Cchar && !p.scalar
+end
+
 @testset "installation" begin
 @test typeof(getproperties()) == Dict{String,Tuple{Any,Bool}}
 @test haskey(getproperties(), "NIDAQMajorVersion")
@@ -30,6 +78,8 @@ end
         @test typeof(analog_voltage_output_ranges(dev)) == LinearAlgebra.Adjoint{Float64,Array{Float64,2}}
         @test typeof(analog_current_input_ranges(dev)) == LinearAlgebra.Adjoint{Float64,Array{Float64,2}}
         @test typeof(analog_current_output_ranges(dev)) == LinearAlgebra.Adjoint{Float64,Array{Float64,2}}
+        @test (@test_deprecated analog_input_ranges(dev)) == analog_voltage_input_ranges(dev)
+        @test (@test_deprecated analog_output_ranges(dev)) == analog_voltage_output_ranges(dev)
     end
 end
 
@@ -43,11 +93,11 @@ end
         # clear nulls the handle and is idempotent; close is an alias
         t = analog_input(ch)
         @test isopen(t)
-        @test clear(t) === nothing
+        @test isnothing(clear(t))
         @test !isopen(t)
-        @test clear(t) === nothing
+        @test isnothing(clear(t))
         t = analog_input(ch)
-        @test close(t) === nothing
+        @test isnothing(close(t))
         @test !isopen(t)
 
         # the do-block form returns the body's value and clears the task,
@@ -74,8 +124,8 @@ end
         @test_throws ErrorException start(t2)
         finalize(t1)
         @test !isopen(t1)
-        @test start(t2) === nothing
-        @test clear(t2) === nothing
+        @test isnothing(start(t2))
+        @test isnothing(clear(t2))
     end
 end
 
@@ -89,14 +139,25 @@ end
         @test typeof(t) == NIDAQ.AITask
         # querying AI.Max returns the value coerced to the device's ranges, so it
         # does not round-trip on devices with a single range; TermCfg does
-        @test setproperty!(t, dev*"/ai0", "Max", 5.0) === nothing
-        @test setproperty!(t, dev*"/ai0", "TermCfg", NIDAQ.Val_RSE) === nothing
+        @test isnothing(setproperty!(t, dev*"/ai0", "Max", 5.0))
+        @test isnothing(setproperty!(t, dev*"/ai0", "TermCfg", NIDAQ.Val_RSE))
         @test getproperties(t, dev*"/ai0")["TermCfg"] == (:Val_RSE, true)
         @test getproperty(t, dev*"/ai0", "TermCfg") == :Val_RSE
         @test getproperty(t, dev*"/ai0", "Max") isa Float64
         @test_throws ArgumentError setproperty!(t, dev*"/ai0", "Maxx", 5.0)
         @test_throws ArgumentError getproperty(t, dev*"/ai0", "Maxx")
-        @test start(t) == nothing
+
+        # acceleration_input requires a range, and IEPE hardware for the rest
+        @test_throws ArgumentError acceleration_input(dev*"/ai0")
+        if :Val_Accelerometer in props["AISupportedMeasTypes"][1]
+            ta = acceleration_input(dev*"/ai0"; range=[-5.0, 5.0])
+            @test typeof(ta) == NIDAQ.AITask
+            @test channel_type(ta, dev*"/ai0") == (NIDAQ.Val_AI, NIDAQ.Val_Accelerometer)
+            @test isnothing(clear(ta))
+        else
+            @info("$dev does not support accelerometer measurements")
+        end
+        @test isnothing(start(t))
         @test length(NIDAQ.read(t, 3)) == 3
         # the return type is inferable and does not depend on the channel count
         @test (@inferred NIDAQ.read(t, 3)) isa Matrix{Float64}
@@ -107,9 +168,9 @@ end
         @test read!(buf1, t) === buf1
         @test all(isfinite, buf1)
         @test_throws ArgumentError read!(Matrix{Float64}(undef, 3, 2), t)
-        @test stop(t) == nothing
-        @test analog_input(t, dev*"/ai1") == nothing
-        @test start(t) == nothing
+        @test isnothing(stop(t))
+        @test isnothing(analog_input(t, dev*"/ai1"))
+        @test isnothing(start(t))
         @test length(NIDAQ.read(t, 6, UInt32)) == 12
         buf2 = Matrix{Float64}(undef, 6, 2)
         @test read!(buf2, t) === buf2
@@ -118,20 +179,20 @@ end
         @test read!(buf3, t) === buf3
         @test_throws ArgumentError read!(Vector{Float64}(undef, 6), t)
         @test_throws ArgumentError read!(Matrix{Float64}(undef, 6, 3), t)
-        @test stop(t) == nothing
+        @test isnothing(stop(t))
         @test NIDAQ.CfgSampClkTiming(t.th, NIDAQ.str2code(""), 100.0, NIDAQ.Val_Rising,
                 NIDAQ.Val_FiniteSamps, UInt64(10)) == 0
-        @test start(t) == nothing
+        @test isnothing(start(t))
         @test length(NIDAQ.read(t)) == 20
-        @test stop(t) == nothing
+        @test isnothing(stop(t))
         # a finite task larger than any fixed buffer: read(t) must size the
         # buffer from the task, not guess
         @test NIDAQ.CfgSampClkTiming(t.th, NIDAQ.str2code(""), 5000.0, NIDAQ.Val_Rising,
                 NIDAQ.Val_FiniteSamps, UInt64(2000)) == 0
-        @test start(t) == nothing
+        @test isnothing(start(t))
         @test size(NIDAQ.read(t)) == (2000, 2)
-        @test stop(t) == nothing
-        @test clear(t) == nothing
+        @test isnothing(stop(t))
+        @test isnothing(clear(t))
     end
 end
 
@@ -141,20 +202,20 @@ end
     else
         t = analog_output(dev*"/ao0")
         @test typeof(t) == NIDAQ.AOTask
-        @test start(t) == nothing
+        @test isnothing(start(t))
         @test NIDAQ.write(t, rand(3)) == 3
-        @test stop(t) == nothing
-        @test analog_output(t, dev*"/ao1") == nothing
-        @test start(t) == nothing
+        @test isnothing(stop(t))
+        @test isnothing(analog_output(t, dev*"/ao1"))
+        @test isnothing(start(t))
         @test NIDAQ.write(t, rand(UInt32,6,2)) == 6
-        @test stop(t) == nothing
+        @test isnothing(stop(t))
         @test NIDAQ.CfgSampClkTiming(t.th, NIDAQ.str2code(""), 100.0, NIDAQ.Val_Rising,
                 NIDAQ.Val_FiniteSamps, UInt64(10)) == 0
         @test NIDAQ.write(t, rand(UInt32,10,2)) == 10
-        @test start(t) == nothing
+        @test isnothing(start(t))
         @test NIDAQ.WaitUntilTaskDone(t.th,10.0) == 0
-        @test stop(t) == nothing
-        @test clear(t) == nothing
+        @test isnothing(stop(t))
+        @test isnothing(clear(t))
     end
 end
 
@@ -165,26 +226,26 @@ end
     else
         t = digital_input(dev*"/Port0/Line0")
         @test typeof(t) == NIDAQ.DITask
-        @test start(t) == nothing
+        @test isnothing(start(t))
         @test length(NIDAQ.read(t, 3)) == 3
         @test (@inferred NIDAQ.read(t, 3)) isa Matrix{UInt32}
         @test (@inferred NIDAQ.read(t, 3, UInt8)) isa Matrix{UInt8}
-        @test stop(t) == nothing
-        @test digital_input(t, dev*"/Port0/Line1") == nothing
-        @test start(t) == nothing
+        @test isnothing(stop(t))
+        @test isnothing(digital_input(t, dev*"/Port0/Line1"))
+        @test isnothing(start(t))
         @test length(NIDAQ.read(t, 6)) == 12
-        @test stop(t) == nothing
+        @test isnothing(stop(t))
         rslt = Ref{UInt32}(0)
         NIDAQ.DAQmxGetBufInputOnbrdBufSize(t.th, rslt)
         if rslt[] != 0 #If the device supports buffered digital input
             @test NIDAQ.CfgSampClkTiming(t.th, NIDAQ.str2code(""), 100.0, NIDAQ.Val_Rising,
                                         NIDAQ.Val_FiniteSamps, UInt64(10)) == 0
             if first(props["ProductCategory"]) != :Val_MSeriesDAQ # M Series has no digital onboard clock
-            @test start(t) == nothing
+            @test isnothing(start(t))
             @test length(NIDAQ.read(t)) == 20
-            @test stop(t) == nothing
+            @test isnothing(stop(t))
             end
-            @test clear(t) == nothing
+            @test isnothing(clear(t))
         else
             @info("Device does not support clocked (buffered) digital input")
         end
@@ -197,13 +258,13 @@ end
     else
         t = digital_output(dev*"/Port0/Line0")
         @test typeof(t) == NIDAQ.DOTask
-        @test start(t) == nothing
+        @test isnothing(start(t))
         @test NIDAQ.write(t, round.(UInt32, [1,0,1,0,1,0])) == 6
-        @test stop(t) == nothing
-        @test digital_output(t, dev*"/Port0/Line1") == nothing
-        @test start(t) == nothing
+        @test isnothing(stop(t))
+        @test isnothing(digital_output(t, dev*"/Port0/Line1"))
+        @test isnothing(start(t))
         @test NIDAQ.write(t, round.(UInt32, [1 0; 0 0; 1 0; 0 1; 1 1; 0 1])) == 6
-        @test stop(t) == nothing
+        @test isnothing(stop(t))
         rslt = Ref{UInt32}(0)
         NIDAQ.DAQmxGetBufOutputOnbrdBufSize(t.th, rslt)
         if rslt[] != 0 #If the device supports buffered digital output
@@ -211,11 +272,11 @@ end
                                         NIDAQ.Val_FiniteSamps, UInt64(10)) == 0
             if first(props["ProductCategory"]) != :Val_MSeriesDAQ # M Series has no digital onboard clock
                 @test NIDAQ.write(t, rand(UInt32,10,2)) == 10
-            @test start(t) == nothing
+            @test isnothing(start(t))
                 @test NIDAQ.WaitUntilTaskDone(t.th,10.0) == 0
-            @test stop(t) == nothing
+            @test isnothing(stop(t))
             end
-            @test clear(t) == nothing
+            @test isnothing(clear(t))
         else
             @info("Device does not support clocked (buffered) digital output")
         end
@@ -234,7 +295,7 @@ end
         t = count_edges(ch; initial_count=7)
         @test typeof(t) == NIDAQ.CITask
         @test channel_type(t, ch) == (NIDAQ.Val_CI, NIDAQ.Val_CountEdges)
-        @test start(t) == nothing
+        @test isnothing(start(t))
         data = read(t, ch; num_samples=1)
         @test data isa Vector{UInt32}
         @test length(data) == 1
@@ -243,14 +304,14 @@ end
         @test data isa Vector{UInt32}
         @test length(data) == 3
         @test length(read(t, ch)) == 1   # an on-demand task yields one sample per read
-        @test stop(t) == nothing
-        @test clear(t) == nothing
+        @test isnothing(stop(t))
+        @test isnothing(clear(t))
 
         if :Val_Position_AngEncoder in meas_types
             t = quadrature_input(ch)
             @test typeof(t) == NIDAQ.CITask
             @test channel_type(t, ch) == (NIDAQ.Val_CI, NIDAQ.Val_Position_AngEncoder)
-            @test clear(t) == nothing
+            @test isnothing(clear(t))
         else
             @info("$dev does not support angular encoder measurements")
         end
@@ -259,7 +320,7 @@ end
             t = line_to_line(ch)
             @test typeof(t) == NIDAQ.CITask
             @test channel_type(t, ch) == (NIDAQ.Val_CI, NIDAQ.Val_TwoEdgeSep)
-            @test clear(t) == nothing
+            @test isnothing(clear(t))
         else
             @info("$dev does not support two-edge separation measurements")
         end
@@ -273,9 +334,9 @@ end
         t = generate_pulses(dev*"/ctr0")
         @test typeof(t) == NIDAQ.COTask
         @test NIDAQ.CfgImplicitTiming(t.th, NIDAQ.Val_FiniteSamps, UInt64(10)) == 0
-        @test start(t) == nothing
-        @test stop(t) == nothing
-        @test clear(t) == nothing
+        @test isnothing(start(t))
+        @test isnothing(stop(t))
+        @test isnothing(clear(t))
     end
 end
 
