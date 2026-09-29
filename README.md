@@ -183,7 +183,7 @@ julia> analog_input(t, "Dev1/ai2")
 ```
 
 Keyword arguments choose the terminal configuration, the range of values
-expected, and whether voltage or current is measured:
+expected, and whether voltage, current, or acceleration is measured:
 
 ```
 julia> analog_input("Dev1/ai3"; terminal_config=:rse, range=[-5.0, 5.0], type=:voltage)

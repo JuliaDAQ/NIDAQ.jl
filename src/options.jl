@@ -7,7 +7,7 @@ const terminal_configs = (default          = Val_Cfg_Default,
                           differential     = Val_Diff,
                           pseudodifferential = Val_PseudoDiff)
 
-const input_types = (voltage = Val_Voltage, current = Val_Current)
+const input_types = (voltage = Val_Voltage, current = Val_Current, acceleration = Val_Accelerometer)
 
 const edges = (rising = Val_Rising, falling = Val_Falling)
 

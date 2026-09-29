@@ -159,10 +159,13 @@ end
         @test_throws ArgumentError setproperty!(t, dev*"/ai0", "Maxx", 5.0)
         @test_throws ArgumentError getproperty(t, dev*"/ai0", "Maxx")
 
-        # acceleration_input requires a range, and IEPE hardware for the rest
-        @test_throws ArgumentError acceleration_input(dev*"/ai0")
+        # acceleration inputs require a range, and IEPE hardware for the rest
+        @test_throws ArgumentError analog_input(dev*"/ai0"; type=:acceleration)
         if :Val_Accelerometer in props["AISupportedMeasTypes"][1]
-            ta = acceleration_input(dev*"/ai0"; range=[-5.0, 5.0], excitation_current=0.004)
+            ta = analog_input(dev*"/ai0"; type=:acceleration, range=[-5.0, 5.0], excitation_current=0.004)
+            @test channel_type(ta, dev*"/ai0") == (:Val_AI, :Val_Accelerometer)
+            @test isnothing(clear(ta))
+            ta = @test_deprecated acceleration_input(dev*"/ai0"; range=[-5.0, 5.0])
             @test typeof(ta) == NIDAQ.AITask
             @test channel_type(ta, dev*"/ai0") == (:Val_AI, :Val_Accelerometer)
             @test isnothing(clear(ta))

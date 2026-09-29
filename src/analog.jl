@@ -1,29 +1,35 @@
 """
-`analog_input(channel; terminal_config=:differential, range=nothing, type=:voltage) -> task`
+`analog_input(channel; terminal_config=:differential, range=nothing, type=:voltage, sensitivity=100.0, excitation_current=0.002) -> task`
 
-`analog_input(task, channel; terminal_config=:differential, range=nothing, type=:voltage)`
+`analog_input(task, channel; terminal_config=:differential, range=nothing, type=:voltage, sensitivity=100.0, excitation_current=0.002)`
 
 create an analog input channel, and a new task if one is not specified.
 
 terminal_config can be :rse, :nrse, :differential, :pseudodifferential, or
 :default, the last meaning whatever the device defaults to.
+type is :voltage, :current, or :acceleration.  Current inputs use the internal
+shunt resistor.
 range is a two-element vector giving the minimum and maximum value to measure
-in volts or amperes, and defaults to the largest range the device supports.
-type is :voltage or :current.  Current inputs use the internal shunt resistor.
+in volts, amperes, or g (9.81 m/s^2).  For voltage and current it defaults to
+the largest range the device supports; for acceleration it is required.
+sensitivity, in mV/g, and excitation_current, the IEPE excitation in amperes,
+apply only to acceleration inputs.
 
-The measurements are returned in volts or amperes.
+The measurements are returned in volts, amperes, or g.
 
 For more information see the NI documentation:
 https://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxcreateaivoltagechan/
 https://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxcreateaicurrentchan/
-
+https://zone.ni.com/reference/en-XX/help/370471AA-01/daqmxcfunc/daqmxcreateaiaccelchan/
 """
 function analog_input(channel::String;
                       terminal_config::Symbol = :differential,
                       range = nothing,
-                      type::Symbol = :voltage)
+                      type::Symbol = :voltage,
+                      sensitivity::Real = 100.0,
+                      excitation_current::Real = 0.002)
     t = AITask()
-    analog_input(t, channel; terminal_config, range, type)
+    analog_input(t, channel; terminal_config, range, type, sensitivity, excitation_current)
     t
 end
 
@@ -31,17 +37,22 @@ function analog_input(t::AITask,
                       channel::String;
                       terminal_config::Symbol = :differential,
                       range = nothing,
-                      type::Symbol = :voltage)
+                      type::Symbol = :voltage,
+                      sensitivity::Real = 100.0,        # mV/g, acceleration only
+                      excitation_current::Real = 0.002) # A, acceleration only
     config = _lookup(terminal_configs, terminal_config, "terminal_config")
     _lookup(input_types, type, "type")
     if isnothing(range)
         device::String = split(channel,'/')[1]
         if type == :voltage
             range = float(analog_voltage_input_ranges(device)[end,:])
-        else
+        elseif type == :current
             range = float(analog_current_input_ranges(device)[end,:])
+        else
+            throw(ArgumentError("range is required for acceleration inputs"))
         end
     end
+    see = "(for terminal configurations see https://www.ni.com/documentation/en/ni-daqmx/latest/devconsid/defaulttermconfig/) "
     if type == :voltage # https://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxcreateaivoltagechan/
         catch_error( CreateAIVoltageChan(t.th,
                 str2code(channel),
@@ -49,8 +60,8 @@ function analog_input(t::AITask,
                 config,
                 range[1], range[2],
                 Val_Volts,
-                convert(Ptr{UInt8},C_NULL)), "see https://www.ni.com/documentation/en/ni-daqmx/latest/devconsid/defaulttermconfig/" )
-    else # https://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxcreateaicurrentchan/
+                C_NULL), see )
+    elseif type == :current # https://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxcreateaicurrentchan/
         catch_error( CreateAICurrentChan(t.th,
                 str2code(channel),
                 str2code(""),
@@ -58,64 +69,25 @@ function analog_input(t::AITask,
                 range[1], range[2],
                 Val_Amps,
                 Val_Default, # shuntResistorLoc
-                0 ,
-                convert(Ptr{UInt8},C_NULL)), "see https://www.ni.com/documentation/en/ni-daqmx/latest/devconsid/defaulttermconfig/" )
+                0.0,         # extShuntResistorVal, unused with the internal shunt
+                C_NULL), see )
+    else # https://zone.ni.com/reference/en-XX/help/370471AA-01/daqmxcfunc/daqmxcreateaiaccelchan/
+        catch_error( CreateAIAccelChan(t.th,
+                str2code(channel),
+                str2code(""),
+                config,
+                range[1], range[2],
+                Val_AccelUnit_g,
+                Float64(sensitivity),
+                Val_mVoltsPerG,
+                Val_Internal,
+                Float64(excitation_current),
+                C_NULL), see )
     end
-
     nothing
 end
 
-"""
-`acceleration_input(channel; terminal_config=:differential, range, sensitivity=100.0, excitation_current=0.002) -> task`
 
-`acceleration_input(task, channel; terminal_config=:differential, range, sensitivity=100.0, excitation_current=0.002)`
-
-create an acceleration input channel, and a new task if one is not specified
-
-terminal_config can be :rse, :nrse, :differential, :pseudodifferential, or
-:default.
-range is a required two-element vector giving the minimum and maximum value to
-measure in g (9.81 m/s^2).
-sensitivity is the sensor's sensitivity in mV/g.
-excitation_current is the IEPE excitation current in amperes.
-
-The measurements are returned in g.
-
-For more information see the NI documentation:
-https://zone.ni.com/reference/en-XX/help/370471AA-01/daqmxcfunc/daqmxcreateaiaccelchan/
-"""
-function acceleration_input(channel::String;
-                      terminal_config::Symbol = :differential,
-                      range = nothing, # in g
-                      sensitivity::Real = 100. ,
-                      excitation_current::Real = 0.002)
-    t = AITask()
-    acceleration_input(t, channel; terminal_config, range, sensitivity, excitation_current)
-    t
-end
-
-function acceleration_input(t::AITask, channel::String;
-                      terminal_config::Symbol = :differential,
-                      range = nothing, # in g
-                      sensitivity::Real = 100. , # mV / g
-                      excitation_current::Real = 0.002) # Ampere
-    config = _lookup(terminal_configs, terminal_config, "terminal_config")
-    isnothing(range) && throw(ArgumentError("specify input ranges"))
-    # https://zone.ni.com/reference/en-XX/help/370471AA-01/daqmxcfunc/daqmxcreateaiaccelchan/
-    catch_error( CreateAIAccelChan(t.th,
-            str2code(channel),
-            str2code(""),
-            config,
-            range[1], range[2],
-            Val_AccelUnit_g, # or Val_MetersPerSecondSquared
-            sensitivity,
-            Val_mVoltsPerG, # or Val_VoltsPerG
-            Val_Internal,
-            excitation_current,
-            convert(Ptr{UInt8},C_NULL)), "see https://www.ni.com/documentation/en/ni-daqmx/latest/devconsid/defaulttermconfig/" )
-    @warn("Attention, this channel has input/output values based in g, not SI (m/s2)")
-    nothing
-end
 """
 `analog_output(channel; range=nothing) -> task`
 

@@ -26,7 +26,6 @@ export start, stop, clear
 
 # channels
 export analog_input, analog_output, digital_input, digital_output
-export acceleration_input
 export count_edges, quadrature_input, line_to_line, generate_pulses
 
 # properties
@@ -180,7 +179,7 @@ include("counter.jl")
 include("properties.jl")
 include("deprecations.jl")
 
-for f in (:analog_input, :analog_output, :acceleration_input,
+for f in (:analog_input, :analog_output,
           :digital_input, :digital_output,
           :count_edges, :quadrature_input, :line_to_line, :generate_pulses)
     @eval function $f(body::Function, args...; kwargs...)
