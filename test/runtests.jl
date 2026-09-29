@@ -150,7 +150,7 @@ end
         # acceleration_input requires a range, and IEPE hardware for the rest
         @test_throws ArgumentError acceleration_input(dev*"/ai0")
         if :Val_Accelerometer in props["AISupportedMeasTypes"][1]
-            ta = acceleration_input(dev*"/ai0"; range=[-5.0, 5.0])
+            ta = acceleration_input(dev*"/ai0"; range=[-5.0, 5.0], excitation_current=0.004)
             @test typeof(ta) == NIDAQ.AITask
             @test channel_type(ta, dev*"/ai0") == (NIDAQ.Val_AI, NIDAQ.Val_Accelerometer)
             @test isnothing(clear(ta))

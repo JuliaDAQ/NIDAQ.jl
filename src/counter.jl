@@ -1,7 +1,9 @@
 """
-`count_edges(channel; edge="rising",initial_count=0,direction="up") -> task`
+`count_edges(channel; edge="rising", initial_count=0, direction="up") -> task`
 
-create a NIDAQ counter input channel
+create a NIDAQ counter input channel which counts edges.  a counter task holds
+a single channel, so unlike the analog and digital constructors there is no
+method which adds a channel to an existing task.
 """
 function count_edges(channel::String;
         edge::AbstractString="rising", initial_count::Integer=0, direction::AbstractString="up")
@@ -46,7 +48,9 @@ end
 """
 `quadrature_input(channel; z_enable=true) -> task`
 
-create a NIDAQ counter input channel
+create a NIDAQ counter input channel which reads an angular encoder.  a counter
+task holds a single channel, so unlike the analog and digital constructors
+there is no method which adds a channel to an existing task.
 """
 function quadrature_input(channel::String; z_enable::Bool=true)
     t = CITask()
@@ -65,9 +69,11 @@ function quadrature_input(channel::String; z_enable::Bool=true)
 end
 
 """
-`line_to_line(channel; units="seconds",edge1="rising",edge2="rising") -> task`
+`line_to_line(channel; units="seconds", edge1="rising", edge2="rising") -> task`
 
-create a NIDAQ counter input channel
+create a NIDAQ counter input channel which measures the separation between two
+edges.  a counter task holds a single channel, so unlike the analog and digital
+constructors there is no method which adds a channel to an existing task.
 """
 function line_to_line(channel::String;
         units::AbstractString="seconds", edge1::AbstractString="rising", edge2::AbstractString="rising")
@@ -93,9 +99,12 @@ function line_to_line(channel::String;
 end
 
 """
-`generate_pulses(channel; low=2,high=2,delay=0) -> task`
+`generate_pulses(channel; low=2, high=2, delay=0) -> task`
 
-create a NIDAQ counter output channel
+create a NIDAQ counter output channel which generates pulses.  low, high, and
+delay are in seconds if floating point and in timebase ticks if integer.  a
+counter task holds a single channel, so unlike the analog and digital
+constructors there is no method which adds a channel to an existing task.
 """
 function generate_pulses(channel::String; low::T=2, high::T=2, delay::T=0) where T<:Number
     t = COTask()

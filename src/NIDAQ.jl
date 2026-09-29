@@ -197,9 +197,13 @@ str2code(s::String) = str2code(Val(Cchar), s)
 str2code(::Val{Cchar}, s::String) = Ref(Cchar.(codeunits(s * '\0')),1)
 str2code(::Val{UInt8}, s::String) = Ref(codeunits(s),1)
 
-@doc """`read(task, nsamples, precision) -> Matrix`
+@doc """`read(task, nsamples=-1, T=Float64) -> Matrix{T}`
 
-receive data from all analog or digital channels in a NIDAQ task
+receive data from all analog or digital input channels in a NIDAQ task, one
+column per channel.  nsamples is the number of samples per channel; -1 reads
+every sample of a finite acquisition or everything currently buffered in a
+continuous one.  T is the element type, and for digital tasks defaults to
+UInt32.
 """ read
 
 @doc """`write(task, data)`

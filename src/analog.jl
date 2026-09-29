@@ -9,18 +9,19 @@ analog_input_configs = Dict{AbstractString,TerminalConfig}(  # deprecate
 
 
 """
-`analog_input(channel; terminal_config, range, type=Voltage) -> task`
+`analog_input(channel; terminal_config=Differential, range=nothing, type=Voltage) -> task`
 
-`analog_input(task, channel; terminal_config, range, type=Voltage)`
+`analog_input(task, channel; terminal_config=Differential, range=nothing, type=Voltage)`
 
 create an analog input channel, and a new task if one is not specified.
 
-terminal_config can be Default, RSE, NRSE, Differential, PseudoDifferential
-range specifies the minimum and maximum value to measure in volt or ampere
-type indicates whether it is a voltage or current input. For current inputs, default it is
- the internal shunt resistor.
+terminal_config can be RSE, NRSE, Differential, or PseudoDifferential.
+range is a two-element vector giving the minimum and maximum value to measure
+in volts or amperes, and defaults to the largest range the device supports.
+type is NIDAQ.Voltage or NIDAQ.Current.  Current inputs use the internal shunt
+resistor.
 
-The measurements are returned in volt or ampere.
+The measurements are returned in volts or amperes.
 
 For more information see the NI documentation:
 https://zone.ni.com/reference/en-XX/help/370471AM-01/daqmxcfunc/daqmxcreateaivoltagechan/
@@ -82,39 +83,39 @@ function analog_input(t::AITask,
 end
 
 """
-`acceleration_input(channel, config, range) -> task`
+`acceleration_input(channel; terminal_config=Differential, range, sensitivity=100.0, excitation_current=0.002) -> task`
 
-`acceleration_input(task, channel, config, range)`
+`acceleration_input(task, channel; terminal_config=Differential, range, sensitivity=100.0, excitation_current=0.002)`
 
 create an acceleration input channel, and a new task if one is not specified
 
-terminal_config can be Default, RSE, NRSE, Differential, PseudoDifferential
-range specifies the minimum and maximum value to measure in g (9.81 m/s^2)
-sensitivity specifies the sensor´s sensitivity in mV/g (default is 100mV/g)
-currentexcitval is the excitation current in ampere (default 2mA)
+terminal_config can be RSE, NRSE, Differential, or PseudoDifferential.
+range is a required two-element vector giving the minimum and maximum value to
+measure in g (9.81 m/s^2).
+sensitivity is the sensor's sensitivity in mV/g.
+excitation_current is the IEPE excitation current in amperes.
 
 The measurements are returned in g.
 
 For more information see the NI documentation:
 https://zone.ni.com/reference/en-XX/help/370471AA-01/daqmxcfunc/daqmxcreateaiaccelchan/
 """
-
 function acceleration_input(channel::String;
-                      terminal_config::TerminalConfig = Differential, 
+                      terminal_config::TerminalConfig = Differential,
                       range = nothing, # in g
-                      sensitivity::Real = 100. , 
-                      currentexcitval::Real = 0.002)
-    
+                      sensitivity::Real = 100. ,
+                      excitation_current::Real = 0.002)
+
     t = AITask()
-    acceleration_input(t, channel; terminal_config, range, sensitivity, currentexcitval)
+    acceleration_input(t, channel; terminal_config, range, sensitivity, excitation_current)
     t
 end
 
 function acceleration_input(t::AITask, channel::String;
-                      terminal_config::TerminalConfig = Differential, 
-                      range = nothing, # in g 
+                      terminal_config::TerminalConfig = Differential,
+                      range = nothing, # in g
                       sensitivity::Real = 100. , # mV / g
-                      currentexcitval::Real = 0.002) # Ampere
+                      excitation_current::Real = 0.002) # Ampere
     isnothing(range) && throw(ArgumentError("specify input ranges"))
     # https://zone.ni.com/reference/en-XX/help/370471AA-01/daqmxcfunc/daqmxcreateaiaccelchan/
     catch_error( CreateAIAccelChan(t.th,
@@ -126,17 +127,20 @@ function acceleration_input(t::AITask, channel::String;
             sensitivity,
             Val_mVoltsPerG, # or Val_VoltsPerG
             Val_Internal,
-            currentexcitval,
+            excitation_current,
             convert(Ptr{UInt8},C_NULL)), "see https://www.ni.com/documentation/en/ni-daqmx/latest/devconsid/defaulttermconfig/" )
     @warn("Attention, this channel has input/output values based in g, not SI (m/s2)")
     nothing
 end
 """
-`analog_output(channel, range) -> task`
+`analog_output(channel; range=nothing) -> task`
 
-`analog_output(task, channel, range)`
+`analog_output(task, channel; range=nothing)`
 
-create an analog output channel, and a new NIDAQ task if one is not specified
+create an analog output channel, and a new NIDAQ task if one is not specified.
+
+range is a two-element vector giving the minimum and maximum value to generate
+in volts, and defaults to the largest range the device supports.
 """
 function analog_output(channel::String; range=nothing)
     t = AOTask()
