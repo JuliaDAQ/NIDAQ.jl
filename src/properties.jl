@@ -61,12 +61,8 @@ for (jfunction, cfunction) in (
     """)) $jfunction
 end
 
-"""
-`channel_type(task,channel) -> channel_type, measurement/output_type`
-
-get the type of the specified NIDAQ channel
-"""
-function channel_type(t::Task, channel::String)
+# the driver's codes for a channel's kind and its measurement or output type
+function _channel_type(t::Task, channel::String)
     val1 = Cint[0]
     catch_error(
         GetChanType(t.th, str2code(channel), Ref(val1,1)) )
@@ -172,7 +168,20 @@ end
 
 const channel_kinds = Dict(Val_AI => "AI", Val_AO => "AO", Val_DI => "DI",
                            Val_DO => "DO", Val_CI => "CI", Val_CO => "CO")
-channel_kind(t::Task, channel::String) = channel_kinds[channel_type(t, channel)[1]]
+channel_kind(t::Task, channel::String) = channel_kinds[_channel_type(t, channel)[1]]
+
+"""
+`channel_type(task, channel) -> kind, measurement_or_output_type`
+
+get the type of the specified NIDAQ channel as a pair of Symbols naming the
+driver's constants, for example `(:Val_AI, :Val_Voltage)` or
+`(:Val_CI, :Val_CountEdges)`.  digital channels have no measurement type, so
+the second element is `nothing` for them.
+"""
+function channel_type(t::Task, channel::String)
+    kind, meas = _channel_type(t, channel)
+    _decode(kind), isnothing(meas) ? nothing : _decode(meas)
+end
 
 """
 `getproperties(task,channel; warning=false) -> Dict`

@@ -138,11 +138,17 @@ function generate_pulses(channel::String; units::Symbol=:seconds,
     t
 end
 
-"""`read(task,channel; num_samples=-1) -> Vector[, Vector]`
-
-receive data from the specified counter channel in the specified NIDAQ task
 """
-function Base.read(t::CITask, channel::String; num_samples::Integer = -1)
+`read(task, nsamples=-1) -> Vector[, Vector]`
+
+receive data from a counter input task.  pulse time and pulse tick
+measurements yield two vectors, the high and low durations; everything else
+yields one.  nsamples is the number of samples to read; -1 reads every sample
+of a finite acquisition, everything currently buffered in a continuous one, or
+one sample from an on-demand task.
+"""
+function Base.read(t::CITask, num_samples::Integer = -1)
+    channel = only(task_channels(t))   # a counter task holds a single channel
     num_samples == -1 && (num_samples = auto_samples(t))
 
     #function read_counter_scalar(precision::DataType, cfunction::Function)
@@ -183,7 +189,7 @@ function Base.read(t::CITask, channel::String; num_samples::Integer = -1)
         resize!(low, num_samples_read[1])
     end
 
-    tmp = channel_type(t, channel)
+    tmp = _channel_type(t, channel)
     if tmp[2] == Val_CountEdges
         data = read_counter_vector(UInt32, ReadCounterU32)
     elseif tmp[2] == Val_PulseTime

@@ -35,6 +35,9 @@ end
 Base.close(t::Task) = clear(t)
 Base.isopen(t::Task) = t.th != C_NULL
 
+# the names of the virtual channels in a task, in the order they were added
+task_channels(t::Task) = String.(split(getstring(GetTaskChannels, t.th), ", "))
+
 # how many samples per channel a read with num_samples = -1 should return.
 # this mirrors what DAQmx_Val_Auto means for each kind of task, but lets the
 # buffer be sized correctly in advance rather than guessed at

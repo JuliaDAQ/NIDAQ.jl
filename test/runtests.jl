@@ -159,7 +159,7 @@ end
         if :Val_Accelerometer in props["AISupportedMeasTypes"][1]
             ta = acceleration_input(dev*"/ai0"; range=[-5.0, 5.0], excitation_current=0.004)
             @test typeof(ta) == NIDAQ.AITask
-            @test channel_type(ta, dev*"/ai0") == (NIDAQ.Val_AI, NIDAQ.Val_Accelerometer)
+            @test channel_type(ta, dev*"/ai0") == (:Val_AI, :Val_Accelerometer)
             @test isnothing(clear(ta))
         else
             @info("$dev does not support accelerometer measurements")
@@ -178,6 +178,8 @@ end
         @test isnothing(stop(t))
         @test isnothing(analog_input(t, dev*"/ai1"; terminal_config=:rse))
         @test getproperty(t, dev*"/ai1", "TermCfg") == :Val_RSE
+        @test channel_type(t, dev*"/ai1") == (:Val_AI, :Val_Voltage)
+        @test NIDAQ.task_channels(t) == [dev*"/ai0", dev*"/ai1"]
         @test_throws ArgumentError analog_input(dev*"/ai0"; terminal_config=:sideways)
         @test_throws ArgumentError analog_input(dev*"/ai0"; type=:resistance)
         @test isnothing(start(t))
@@ -236,6 +238,7 @@ end
     else
         t = digital_input(dev*"/Port0/Line0")
         @test typeof(t) == NIDAQ.DITask
+        @test channel_type(t, dev*"/Port0/Line0") == (:Val_DI, nothing)
         @test isnothing(start(t))
         @test length(NIDAQ.read(t, 3)) == 3
         @test (@inferred NIDAQ.read(t, 3)) isa Matrix{UInt32}
@@ -323,23 +326,24 @@ end
         @test_throws ArgumentError generate_pulses(ch; idle_state=:middle)
         t = count_edges(ch; edge=:falling, direction=:up, initial_count=7)
         @test typeof(t) == NIDAQ.CITask
-        @test channel_type(t, ch) == (NIDAQ.Val_CI, NIDAQ.Val_CountEdges)
+        @test channel_type(t, ch) == (:Val_CI, :Val_CountEdges)
         @test isnothing(start(t))
-        data = read(t, ch; num_samples=1)
+        data = read(t, 1)
         @test data isa Vector{UInt32}
         @test length(data) == 1
         @test data[1] >= 7
-        data = read(t, ch; num_samples=3)
+        data = read(t, 3)
         @test data isa Vector{UInt32}
         @test length(data) == 3
-        @test length(read(t, ch)) == 1   # an on-demand task yields one sample per read
+        @test length(read(t)) == 1   # an on-demand task yields one sample per read
+        @test NIDAQ.task_channels(t) == [ch]
         @test isnothing(stop(t))
         @test isnothing(clear(t))
 
         if :Val_Position_AngEncoder in meas_types
             t = quadrature_input(ch)
             @test typeof(t) == NIDAQ.CITask
-            @test channel_type(t, ch) == (NIDAQ.Val_CI, NIDAQ.Val_Position_AngEncoder)
+            @test channel_type(t, ch) == (:Val_CI, :Val_Position_AngEncoder)
             @test isnothing(clear(t))
         else
             @info("$dev does not support angular encoder measurements")
@@ -348,7 +352,7 @@ end
         if :Val_TwoEdgeSep in meas_types
             t = line_to_line(ch)
             @test typeof(t) == NIDAQ.CITask
-            @test channel_type(t, ch) == (NIDAQ.Val_CI, NIDAQ.Val_TwoEdgeSep)
+            @test channel_type(t, ch) == (:Val_CI, :Val_TwoEdgeSep)
             @test isnothing(clear(t))
         else
             @info("$dev does not support two-edge separation measurements")
