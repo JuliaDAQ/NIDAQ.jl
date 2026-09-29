@@ -46,6 +46,10 @@ Then on the Julia command line:
 ]add NIDAQ
 ```
 
+**Upgrading**  
+Version 0.7 changes the high-level API in several breaking ways.  See
+[CHANGELOG.md](CHANGELOG.md) for what to change in code written for 0.6.
+
 
 Basic Usage
 ===========
