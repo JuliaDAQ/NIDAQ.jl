@@ -39,6 +39,9 @@ export counter_input_channels,          counter_output_channels
 
 const NIDAQmx = Sys.iswindows() ? "C:\\Windows\\System32\\nicaiu.dll" :
     "/usr/lib/x86_64-linux-gnu/libnidaqmx.so"
+# the wrappers for NI-DAQmx 18.6 through 21.3 were generated with an older
+# Clang.jl which emitted Cstring for char buffers the driver fills in; those
+# files were hand-edited to use this instead.  newer wrappers use Ptr{Cchar}.
 const SafeCstring = Ref{UInt8}
 
 # the driver's bool32 is a 32-bit integer; a distinct type lets getproperties

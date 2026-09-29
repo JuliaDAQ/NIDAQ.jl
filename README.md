@@ -23,10 +23,9 @@ Installation
 ============
 **Windows**  
 First download and install NI-DAQmx version
-[26.5](https://www.ni.com/en/support/downloads/drivers/download.ni-daq-mx.html#484356)
-[23.5](https://www.ni.com/en/support/downloads/drivers/download.ni-daq-mx.html#484356) (or
+[26.5](https://www.ni.com/en/support/downloads/drivers/download.ni-daq-mx.html#484356) (or
+[23.5](https://www.ni.com/en/support/downloads/drivers/download.ni-daq-mx.html#484356),
 [21.3](https://www.ni.com/de-de/support/downloads/drivers/download.ni-daqmx.html#428058),
-[20.1](https://www.ni.com/en-us/support/downloads/drivers/download.ni-daqmx.html#348669), 
 [20.1](https://www.ni.com/en-us/support/downloads/drivers/download.ni-daqmx.html#348669),
 [19.6](https://www.ni.com/en-us/support/downloads/drivers/download/packaged.ni-daqmx.333268.html), 
 [18.6](http://www.ni.com/en-us/support/downloads/drivers/download/unpackaged.ni-daqmx.291872.html);
