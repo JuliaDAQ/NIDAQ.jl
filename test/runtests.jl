@@ -119,6 +119,13 @@ end
         @test start(t) == nothing
         @test length(NIDAQ.read(t)) == 20
         @test stop(t) == nothing
+        # a finite task larger than any fixed buffer: read(t) must size the
+        # buffer from the task, not guess
+        @test NIDAQ.CfgSampClkTiming(t.th, NIDAQ.str2code(""), 5000.0, NIDAQ.Val_Rising,
+                NIDAQ.Val_FiniteSamps, UInt64(2000)) == 0
+        @test start(t) == nothing
+        @test size(NIDAQ.read(t)) == (2000, 2)
+        @test stop(t) == nothing
         @test clear(t) == nothing
     end
 end
@@ -228,6 +235,7 @@ end
         data = read(t, ch; num_samples=3)
         @test data isa Vector{UInt32}
         @test length(data) == 3
+        @test length(read(t, ch)) == 1   # an on-demand task yields one sample per read
         @test stop(t) == nothing
         @test clear(t) == nothing
 

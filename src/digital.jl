@@ -36,24 +36,8 @@ read_digital_cfunctions = Dict{Type,Function}(
     UInt16 => ReadDigitalU16,
     UInt32 => ReadDigitalU32 )
 
-function Base.read(t::DITask, num_samples_per_chan::Integer = -1, precision::DataType = UInt32)
-    outdata_ref = Ref{Cuint}()
-    DAQmxGetTaskNumChans(t.th, outdata_ref)
-    num_channels = outdata_ref.x
-    num_samples_per_chan_read = Int32[0]
-    buffer_size = num_samples_per_chan==-1 ? 1024 : num_samples_per_chan
-    data = Array{precision}(undef, buffer_size*num_channels)
-    catch_error( read_digital_cfunctions[precision](t.th,
-        convert(Int32,num_samples_per_chan),
-        1.0,
-        reinterpret(Bool32,Val_GroupByChannel),
-        Ref(data,1),
-        convert(UInt32,buffer_size*num_channels),
-        Ref(num_samples_per_chan_read,1),
-        reinterpret(Ptr{Bool32},C_NULL)) )
-    resize!(data, num_samples_per_chan_read[1]*num_channels)
-    num_channels==1 ? data : reshape(data, (div(length(data),num_channels), convert(Int64,num_channels)))
-end 
+Base.read(t::DITask, num_samples_per_chan::Integer = -1, precision::DataType = UInt32) =
+    _read(t, read_digital_cfunctions[precision], precision, num_samples_per_chan)
     
 for (cfunction, types) in (
         (WriteDigitalU8,  UInt8),

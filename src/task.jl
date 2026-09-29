@@ -35,6 +35,45 @@ end
 Base.close(t::Task) = clear(t)
 Base.isopen(t::Task) = t.th != C_NULL
 
+# how many samples per channel a read with num_samples = -1 should return.
+# this mirrors what DAQmx_Val_Auto means for each kind of task, but lets the
+# buffer be sized correctly in advance rather than guessed at
+function auto_samples(t::Task)
+    timing = Ref{Int32}()
+    catch_error(GetSampTimingType(t.th, timing))
+    timing[] == Val_OnDemand && return 1
+    mode = Ref{Int32}()
+    catch_error(GetSampQuantSampMode(t.th, mode))
+    if mode[] == Val_FiniteSamps
+        n = Ref{UInt64}()
+        catch_error(GetSampQuantSampPerChan(t.th, n))    # everything the task will acquire
+    else
+        n = Ref{UInt32}()
+        catch_error(GetReadAvailSampPerChan(t.th, n))    # everything buffered right now
+    end
+    Int(n[])
+end
+
+# read `num_samples` per channel from every channel of a task into a freshly
+# allocated matrix, one column per channel
+function _read(t::Task, cfunction::Function, ::Type{T}, num_samples::Integer) where T
+    num_channels = Ref{Cuint}()
+    catch_error(DAQmxGetTaskNumChans(t.th, num_channels))
+    n = num_samples == -1 ? auto_samples(t) : Int(num_samples)
+    data = Vector{T}(undef, n*num_channels[])
+    num_samples_read = Ref{Int32}(0)
+    catch_error( cfunction(t.th,
+        Int32(n),
+        1.0,
+        reinterpret(Bool32, Val_GroupByChannel),
+        data,
+        UInt32(length(data)),
+        num_samples_read,
+        reinterpret(Ptr{Bool32}, C_NULL)) )
+    resize!(data, num_samples_read[]*num_channels[])
+    num_channels[] == 1 ? data : reshape(data, (num_samples_read[], Int(num_channels[])))
+end
+
 function task(name::String)
     th = Ref{TaskHandle}(C_NULL)
     catch_error( DAQmxCreateTask(str2code(name), th) )
