@@ -90,11 +90,13 @@ end
 # enumerations, Bool for bool32, and a list of strings for comma-separated lists
 _decode(x::Bool32) = reinterpret(UInt32, x) != 0
 _decode(x::Int32) = get(signed_constants, x, x)
-_decode(x::UInt32) = get(unsigned_constants, x, x)
 _decode(v::Vector{Int32}) = all(x -> haskey(signed_constants, x), v) ? map(x -> signed_constants[x], v) : v
-_decode(v::Vector{UInt32}) = all(x -> haskey(unsigned_constants, x), v) ? map(x -> unsigned_constants[x], v) : v
 _decode(v::Vector{<:Union{Int8,UInt8}}) = split(cstring(v), ", ")
 _decode(x) = x
+
+# a bitmask becomes the list of flag names whose bits are set
+_decode_flags(x::Integer, flags) = [name for (bit, name) in sort(flags, by=first) if x & bit != 0]
+_decode_flags(v::AbstractVector, flags) = map(x -> _decode_flags(x, flags), v)
 
 function _check(ret::Int32, p::PropertyInfo)
     ret == 0 && return nothing
@@ -118,7 +120,13 @@ function _getproperty(args, p::PropertyInfo)
         data = Vector{T}(undef, sz)
         _check(p.getter(args..., data, UInt32(sz)), p)
     end
-    _decode(data)
+    if p.name in plain_properties
+        data
+    elseif isnothing(p.flags)
+        _decode(data)
+    else
+        _decode_flags(data, get(bit_flags, p.flags, Pair{Int32,Symbol}[]))
+    end
 end
 
 function _getproperties(args, group::String, warning::Bool)

@@ -138,6 +138,22 @@ rather than scanning every wrapper on every call.  The roughly four seconds of
 reflection that every call used to cost is gone; what remains is the driver's
 own round trips, a few milliseconds per property.  Boolean properties, which
 the old code silently dropped, now appear.
+
+Three mislabelings are fixed.  Where several driver constants share a value,
+the shortest name is now reported, so an edge setting reads back as
+`:Val_Rising` rather than `:Val_RisingSlope`.  The properties which are
+bitmasks, the `*TrigUsage` and `*Couplings` families, decode to a vector of
+the flag names set, such as
+`[:Val_Bit_TriggerUsageTypes_Pause, :Val_Bit_TriggerUsageTypes_Start]`, where
+they used to be reported either as a bare integer or under the name of an
+unrelated constant which happened to share the value.  And `UInt32` properties
+are no longer looked up in the table of attribute ids: counts, sizes, tick
+counts, and serial numbers are always plain numbers now, where before a count
+of 6240 was reported as `:SelfCal_Supported` because that is the id of an
+attribute.  The three `Int32` properties which hold plain numbers,
+`BridgeBalanceCoarsePot`, `BridgeBalanceFinePot`, and
+`SampClkOverrunSentinelVal`, are likewise left undecoded.
+
 A new `getproperty(task, channel, property)` reads a single channel property.
 `setproperty!` raises an `ArgumentError` for an unknown or read-only property
 instead of an `UndefVarError`.

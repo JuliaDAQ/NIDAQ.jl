@@ -26,9 +26,28 @@ import LinearAlgebra
     # named constants round trip through the decoding used by getproperties.
     # several constants share a value, so compare values rather than names
     @test getfield(NIDAQ, NIDAQ._decode(Int32(NIDAQ.Val_Rising))) == NIDAQ.Val_Rising
-    @test getfield(NIDAQ, NIDAQ._decode(NIDAQ.AI_Max)) == NIDAQ.AI_Max
     @test NIDAQ._decode(Int32(-987654)) === Int32(-987654)
+    # UInt32 values are counts and sizes, never names, even when one happens to
+    # equal an attribute id such as AI_Max
+    @test NIDAQ._decode(NIDAQ.AI_Max) === NIDAQ.AI_Max
+    @test NIDAQ._decode(UInt32[0x1860, 4]) == UInt32[0x1860, 4]
+    # and a few Int32 properties are plain numbers too
+    @test "BridgeBalanceCoarsePot" in NIDAQ.plain_properties
+    @test haskey(NIDAQ.property_table["AI"], "BridgeBalanceCoarsePot")
     @test NIDAQ._decode(Cchar.(codeunits("a, b\0"))) == ["a", "b"]
+    # the shortest of several names sharing a value wins, so the familiar one is reported
+    @test NIDAQ._decode(Int32(NIDAQ.Val_Rising)) == :Val_Rising
+    @test NIDAQ._decode(Int32(NIDAQ.Val_Falling)) == :Val_Falling
+
+    # bitmask properties decode to the list of flags set, not to a single name
+    trig = NIDAQ.bit_flags["TriggerUsageTypes"]
+    @test NIDAQ._decode_flags(Int32(14), trig) == [:Val_Bit_TriggerUsageTypes_Pause,
+                                                   :Val_Bit_TriggerUsageTypes_Reference,
+                                                   :Val_Bit_TriggerUsageTypes_Start]
+    @test NIDAQ._decode_flags(Int32(0), trig) == Symbol[]
+    @test NIDAQ.property_table["Dev"]["AITrigUsage"].flags == "TriggerUsageTypes"
+    @test NIDAQ.property_table["Dev"]["AICouplings"].flags == "CouplingTypes"
+    @test isnothing(NIDAQ.property_table["AI"]["Coupling"].flags)
 
     # Bool32 is a 32-bit integer on the wire and a Bool once decoded.  it is
     # public but not exported
@@ -80,6 +99,9 @@ end
 
         @test typeof(getproperties(dev)) == Dict{String,Tuple{Any,Bool}}
         @test (@elapsed getproperties(dev)) < 2.0   # dominated by USB round trips, not reflection
+        @test props["AICouplings"][1] isa Vector{Symbol}
+        @test :Val_Bit_CouplingTypes_DC in props["AICouplings"][1]
+        @test props["DITrigUsage"][1] isa Vector{Symbol}
         @test typeof(analog_input_channels(dev)) == Vector{String}
         @test typeof(analog_output_channels(dev)) == Vector{String}
         @test typeof(digital_input_channels(dev)) == Vector{String}
@@ -335,6 +357,14 @@ end
         t = count_edges(ch; edge=:falling, direction=:up, initial_count=7)
         @test typeof(t) == NIDAQ.CITask
         @test channel_type(t, ch) == (:Val_CI, :Val_CountEdges)
+        @test getproperty(t, ch, "CountEdgesActiveEdge") == :Val_Falling
+        @test getproperty(t, ch, "CountEdgesInitialCnt") === UInt32(7)
+        @test isnothing(clear(t))
+        # 6240 is also the id of the SelfCal_Supported attribute; a count must stay a count
+        t = count_edges(ch; initial_count=6240)
+        @test getproperty(t, ch, "CountEdgesInitialCnt") === UInt32(6240)
+        @test isnothing(clear(t))
+        t = count_edges(ch; edge=:falling, direction=:up, initial_count=7)
         @test isnothing(start(t))
         data = read(t, 1)
         @test data isa Vector{UInt32}

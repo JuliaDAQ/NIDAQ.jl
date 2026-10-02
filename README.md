@@ -80,7 +80,7 @@ the second a boolean indicating whether the former is mutable.
 julia> getproperties("Dev1")
 Dict{String,Tuple{Any,Bool}} with 61 entries:
   "AIBridgeRngs"                           => (Float64[],false)
-  "AICouplings"                            => (:Val_Transferred_From_Buffer,false)
+  "AICouplings"                            => ([:Val_Bit_CouplingTypes_DC],false)
   "AICurrentIntExcitDiscreteVals"          => (Float64[],false)
   "AICurrentRngs"                          => (Float64[],false)
   "AIDigFltrLowpassCutoffFreqDiscreteVals" => (Float64[],false)
@@ -96,7 +96,7 @@ Dict{String,Tuple{Any,Bool}} with 61 entries:
   "AIResistanceRngs"                       => (Float64[],false)
   "AISampModes"                            => (Symbol[:Val_FiniteSamps,:Val_ContSamps],false)
   "AISupportedMeasTypes"                   => (Symbol[:Val_Current,:Val_Resistance,:Val_Strain_Gage.
-  "AITrigUsage"                            => (14,false)
+  "AITrigUsage"                            => ([:Val_Bit_TriggerUsageTypes_Pause, :Val_Bit_TriggerUsageTypes_Re.
   "AIVoltageIntExcitDiscreteVals"          => (Float64[],false)
   "AIVoltageIntExcitRangeVals"             => (Float64[],false)
   "AIVoltageRngs"                          => ([-1.0,1.0,-2.0,2.0,-5.0,5.0,-10.0,10.0],false)
@@ -107,7 +107,7 @@ Dict{String,Tuple{Any,Bool}} with 61 entries:
   "AOPhysicalChans"                        => (SubString{String}["Dev1/ao0","Dev1/ao1"],false)
   "AOSampModes"                            => (Symbol[:Val_FiniteSamps,:Val_ContSamps],false)
   "AOSupportedOutputTypes"                 => (Symbol[:Val_Voltage],false)
-  "AOTrigUsage"                            => (10,false)
+  "AOTrigUsage"                            => ([:Val_Bit_TriggerUsageTypes_Pause, :Val_Bit_TriggerUsageTypes_St.
   "AOVoltageRngs"                          => ([-5.0,5.0,-10.0,10.0],false)
   "AccessoryProductNums"                   => (UInt32[0x00000000],false)
   "AccessoryProductTypes"                  => (SubString{String}[""],false)
@@ -118,22 +118,22 @@ Dict{String,Tuple{Any,Bool}} with 61 entries:
   "CIPhysicalChans"                        => (SubString{String}["Dev1/ctr0","Dev1/ctr1","Dev1/ctr2.
   "CISampModes"                            => (Symbol[:Val_FiniteSamps,:Val_ContSamps],false)
   "CISupportedMeasTypes"                   => (Symbol[:Val_CountEdges,:Val_Freq,:Val_Period,:Val_Tw.
-  "CITrigUsage"                            => (42,false)
+  "CITrigUsage"                            => ([:Val_Bit_TriggerUsageTypes_Pause, :Val_Bit_TriggerUsageTypes_St.
   "COMaxSize"                              => (0x00000020,false)
   "COMaxTimebase"                          => (1.0e8,false)
   "COPhysicalChans"                        => (SubString{String}["Dev1/ctr0","Dev1/ctr1","Dev1/ctr2.
   "COSampModes"                            => (Symbol[:Val_FiniteSamps,:Val_ContSamps],false)
   "COSupportedOutputTypes"                 => (Symbol[:Val_Pulse_Freq,:Val_Pulse_Ticks,:Val_Pulse_T.
-  "COTrigUsage"                            => (42,false)
+  "COTrigUsage"                            => ([:Val_Bit_TriggerUsageTypes_Pause, :Val_Bit_TriggerUsageTypes_St.
   "ChassisModuleDevNames"                  => (SubString{String}[""],false)
   "DILines"                                => (SubString{String}["Dev1/port0/line0","Dev1/port0/lin.
   "DIMaxRate"                              => (1.0e7,false)
   "DIPorts"                                => (SubString{String}["Dev1/port0","Dev1/port1","Dev1/po.
-  "DITrigUsage"                            => (14,false)
+  "DITrigUsage"                            => ([:Val_Bit_TriggerUsageTypes_Pause, :Val_Bit_TriggerUsageTypes_Re.
   "DOLines"                                => (SubString{String}["Dev1/port0/line0","Dev1/port0/lin.
   "DOMaxRate"                              => (1.0e7,false)
   "DOPorts"                                => (SubString{String}["Dev1/port0","Dev1/port1","Dev1/po.
-  "DOTrigUsage"                            => (10,false)
+  "DOTrigUsage"                            => ([:Val_Bit_TriggerUsageTypes_Pause, :Val_Bit_TriggerUsageTypes_St.
   "NumDMAChans"                            => (0x00000000,false)
   "ProductCategory"                        => (:Val_XSeriesDAQ,false)
   "ProductNum"                             => (0x000075a1,false)
