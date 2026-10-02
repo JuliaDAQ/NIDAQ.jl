@@ -54,6 +54,9 @@ Version 0.7 changes the high-level API in several breaking ways.  See
 Basic Usage
 ===========
 
+The examples below were captured with a USB-6001 and NI-DAQmx 26.5; a more
+capable device reports more channels, ranges, and properties.
+
 With no input arguments, the high-level `getproperties` function can
 be used to query the system:
 
@@ -61,14 +64,14 @@ be used to query the system:
 julia> using NIDAQ
 
 julia> getproperties()
-Dict{String,Tuple{Any,Bool}} with 7 entries:
-  "DevNames"           => (SubString{String}["Dev1"],false)
-  "GlobalChans"        => (SubString{String}[""],false)
-  "NIDAQMajorVersion"  => (0x00000010,false)
-  "NIDAQMinorVersion"  => (0x00000000,false)
-  "NIDAQUpdateVersion" => (0x00000000,false)
-  "Scales"             => (SubString{String}[""],false)
-  "Tasks"              => (SubString{String}[""],false)
+Dict{String, Tuple{Any, Bool}} with 7 entries:
+  "DevNames"           => (SubString{String}["Dev1"], false)
+  "GlobalChans"        => (SubString{String}[""], false)
+  "NIDAQMajorVersion"  => (0x0000001a, false)
+  "NIDAQMinorVersion"  => (0x00000005, false)
+  "NIDAQUpdateVersion" => (0x00000000, false)
+  "Scales"             => (SubString{String}[""], false)
+  "Tasks"              => (SubString{String}[""], false)
 ```
 
 Returned is a dictionary of tuples, the first member indicating the property value and
@@ -78,75 +81,84 @@ the second a boolean indicating whether the former is mutable.
 
 ```
 julia> getproperties("Dev1")
-Dict{String,Tuple{Any,Bool}} with 61 entries:
-  "AIBridgeRngs"                           => (Float64[],false)
-  "AICouplings"                            => ([:Val_Bit_CouplingTypes_DC],false)
-  "AICurrentIntExcitDiscreteVals"          => (Float64[],false)
-  "AICurrentRngs"                          => (Float64[],false)
-  "AIDigFltrLowpassCutoffFreqDiscreteVals" => (Float64[],false)
-  "AIDigFltrLowpassCutoffFreqRangeVals"    => (Float64[],false)
-  "AIFreqRngs"                             => (Float64[],false)
-  "AIGains"                                => (Float64[],false)
-  "AILowpassCutoffFreqDiscreteVals"        => (Float64[],false)
-  "AILowpassCutoffFreqRangeVals"           => (Float64[],false)
-  "AIMaxMultiChanRate"                     => (2.0e6,false)
-  "AIMaxSingleChanRate"                    => (2.0e6,false)
-  "AIMinRate"                              => (0.0232831,false)
-  "AIPhysicalChans"                        => (SubString{String}["Dev1/ai0","Dev1/ai1","Dev1/ai2",".
-  "AIResistanceRngs"                       => (Float64[],false)
-  "AISampModes"                            => (Symbol[:Val_FiniteSamps,:Val_ContSamps],false)
-  "AISupportedMeasTypes"                   => (Symbol[:Val_Current,:Val_Resistance,:Val_Strain_Gage.
-  "AITrigUsage"                            => ([:Val_Bit_TriggerUsageTypes_Pause, :Val_Bit_TriggerUsageTypes_Re.
-  "AIVoltageIntExcitDiscreteVals"          => (Float64[],false)
-  "AIVoltageIntExcitRangeVals"             => (Float64[],false)
-  "AIVoltageRngs"                          => ([-1.0,1.0,-2.0,2.0,-5.0,5.0,-10.0,10.0],false)
-  "AOCurrentRngs"                          => (Float64[],false)
-  "AOGains"                                => (Float64[],false)
-  "AOMaxRate"                              => (3.33333e6,false)
-  "AOMinRate"                              => (0.0232831,false)
-  "AOPhysicalChans"                        => (SubString{String}["Dev1/ao0","Dev1/ao1"],false)
-  "AOSampModes"                            => (Symbol[:Val_FiniteSamps,:Val_ContSamps],false)
-  "AOSupportedOutputTypes"                 => (Symbol[:Val_Voltage],false)
-  "AOTrigUsage"                            => ([:Val_Bit_TriggerUsageTypes_Pause, :Val_Bit_TriggerUsageTypes_St.
-  "AOVoltageRngs"                          => ([-5.0,5.0,-10.0,10.0],false)
-  "AccessoryProductNums"                   => (UInt32[0x00000000],false)
-  "AccessoryProductTypes"                  => (SubString{String}[""],false)
-  "AccessorySerialNums"                    => (UInt32[0x00000000],false)
-  "BusType"                                => (:Val_USB,false)
-  "CIMaxSize"                              => (0x00000020,false)
-  "CIMaxTimebase"                          => (1.0e8,false)
-  "CIPhysicalChans"                        => (SubString{String}["Dev1/ctr0","Dev1/ctr1","Dev1/ctr2.
-  "CISampModes"                            => (Symbol[:Val_FiniteSamps,:Val_ContSamps],false)
-  "CISupportedMeasTypes"                   => (Symbol[:Val_CountEdges,:Val_Freq,:Val_Period,:Val_Tw.
-  "CITrigUsage"                            => ([:Val_Bit_TriggerUsageTypes_Pause, :Val_Bit_TriggerUsageTypes_St.
-  "COMaxSize"                              => (0x00000020,false)
-  "COMaxTimebase"                          => (1.0e8,false)
-  "COPhysicalChans"                        => (SubString{String}["Dev1/ctr0","Dev1/ctr1","Dev1/ctr2.
-  "COSampModes"                            => (Symbol[:Val_FiniteSamps,:Val_ContSamps],false)
-  "COSupportedOutputTypes"                 => (Symbol[:Val_Pulse_Freq,:Val_Pulse_Ticks,:Val_Pulse_T.
-  "COTrigUsage"                            => ([:Val_Bit_TriggerUsageTypes_Pause, :Val_Bit_TriggerUsageTypes_St.
-  "ChassisModuleDevNames"                  => (SubString{String}[""],false)
-  "DILines"                                => (SubString{String}["Dev1/port0/line0","Dev1/port0/lin.
-  "DIMaxRate"                              => (1.0e7,false)
-  "DIPorts"                                => (SubString{String}["Dev1/port0","Dev1/port1","Dev1/po.
-  "DITrigUsage"                            => ([:Val_Bit_TriggerUsageTypes_Pause, :Val_Bit_TriggerUsageTypes_Re.
-  "DOLines"                                => (SubString{String}["Dev1/port0/line0","Dev1/port0/lin.
-  "DOMaxRate"                              => (1.0e7,false)
-  "DOPorts"                                => (SubString{String}["Dev1/port0","Dev1/port1","Dev1/po.
-  "DOTrigUsage"                            => ([:Val_Bit_TriggerUsageTypes_Pause, :Val_Bit_TriggerUsageTypes_St.
-  "NumDMAChans"                            => (0x00000000,false)
-  "ProductCategory"                        => (:Val_XSeriesDAQ,false)
-  "ProductNum"                             => (0x000075a1,false)
-  "ProductType"                            => (SubString{String}["USB-6366 (64 MS) (Mass Terminatio.
-  "SerialNum"                              => (0x01719e54,false)
-  "Terminals"                              => (SubString{String}["/Dev1/PFI0","/Dev1/PFI1","/Dev1/P.
+Dict{String, Tuple{Any, Bool}} with 70 entries:
+  "AIBridgeRngs"                           => (Float64[], false)
+  "AIChargeRngs"                           => (Float64[], false)
+  "AICouplings"                            => ([:Val_Bit_CouplingTypes_DC], false)
+  "AICurrentIntExcitDiscreteVals"          => (Float64[], false)
+  "AICurrentRngs"                          => (Float64[], false)
+  "AIDigFltrLowpassCutoffFreqDiscreteVals" => (Float64[], false)
+  "AIDigFltrLowpassCutoffFreqRangeVals"    => (Float64[], false)
+  "AIFreqRngs"                             => (Float64[], false)
+  "AIGains"                                => (Float64[], false)
+  "AILowpassCutoffFreqDiscreteVals"        => (Float64[], false)
+  "AILowpassCutoffFreqRangeVals"           => (Float64[], false)
+  "AIMaxMultiChanRate"                     => (20000.0, false)
+  "AIMaxSingleChanRate"                    => (20000.0, false)
+  "AIMinRate"                              => (0.0186265, false)
+  "AIPhysicalChans"                        => (SubString{String}["Dev1/ai0", "Dev1/ai1", "Dev1/ai2"…
+  "AIResistanceRngs"                       => (Float64[], false)
+  "AISampModes"                            => ([:Val_FiniteSamps, :Val_ContSamps], false)
+  "AISimultaneousSamplingSupported"        => (false, false)
+  "AISupportedMeasTypes"                   => ([:Val_Current, :Val_Resistance, :Val_Strain_Gage, :V…
+  "AITrigUsage"                            => ([:Val_Bit_TriggerUsageTypes_Start], false)
+  "AIVoltageIntExcitDiscreteVals"          => (Float64[], false)
+  "AIVoltageIntExcitRangeVals"             => (Float64[], false)
+  "AIVoltageRngs"                          => ([-10.0, 10.0], false)
+  "AOCurrentRngs"                          => (Float64[], false)
+  "AOGains"                                => (Float64[], false)
+  "AOMaxRate"                              => (5000.0, false)
+  "AOMinRate"                              => (0.0186265, false)
+  "AOPhysicalChans"                        => (SubString{String}["Dev1/ao0", "Dev1/ao1"], false)
+  "AOSampClkSupported"                     => (true, false)
+  "AOSampModes"                            => ([:Val_FiniteSamps, :Val_ContSamps], false)
+  "AOSupportedOutputTypes"                 => ([:Val_Voltage], false)
+  "AOTrigUsage"                            => ([:Val_Bit_TriggerUsageTypes_Start], false)
+  "AOVoltageRngs"                          => ([-10.0, 10.0], false)
+  "AccessoryProductNums"                   => (UInt32[0x00000000], false)
+  "AccessoryProductTypes"                  => (SubString{String}[""], false)
+  "AccessorySerialNums"                    => (UInt32[0x00000000], false)
+  "AnlgTrigSupported"                      => (false, false)
+  "BusType"                                => (:Val_USB, false)
+  "CIMaxSize"                              => (0x00000020, false)
+  "CIPhysicalChans"                        => (SubString{String}["Dev1/ctr0"], false)
+  "CISampClkSupported"                     => (false, false)
+  "CISampModes"                            => (Symbol[], false)
+  "CISupportedMeasTypes"                   => ([:Val_CountEdges], false)
+  "CITrigUsage"                            => (Symbol[], false)
+  "COPhysicalChans"                        => (SubString{String}[""], false)
+  "COSampClkSupported"                     => (false, false)
+  "COSampModes"                            => (Symbol[], false)
+  "COSupportedOutputTypes"                 => (Symbol[], false)
+  "COTrigUsage"                            => (Symbol[], false)
+  "ChassisModuleDevNames"                  => (SubString{String}[""], false)
+  "DILines"                                => (SubString{String}["Dev1/port0/line0", "Dev1/port0/li…
+  "DIPorts"                                => (SubString{String}["Dev1/port0", "Dev1/port1", "Dev1/…
+  "DITrigUsage"                            => (Symbol[], false)
+  "DOLines"                                => (SubString{String}["Dev1/port0/line0", "Dev1/port0/li…
+  "DOPorts"                                => (SubString{String}["Dev1/port0", "Dev1/port1", "Dev1/…
+  "DOTrigUsage"                            => (Symbol[], false)
+  "DigTrigSupported"                       => (true, false)
+  "IDPinMemFamilyCodes"                    => (UInt32[], false)
+  "IDPinMemSerialNums"                     => (SubString{String}[""], false)
+  "IDPinMemSizes"                          => (UInt32[], false)
+  "IDPinPinNames"                          => (SubString{String}[""], false)
+  "IDPinPinStatuses"                       => (Symbol[], false)
+  "IsSimulated"                            => (false, false)
+  "NumDMAChans"                            => (0x00000000, false)
+  "ProductCategory"                        => (:Val_USBDAQ, false)
+  "ProductNum"                             => (0x000076bf, false)
+  "ProductType"                            => (SubString{String}["USB-6001"], false)
+  "SerialNum"                              => (0x029762e1, false)
+  "TEDSHWTEDSSupported"                    => (false, false)
+  "Terminals"                              => (SubString{String}["/Dev1/PFI0", "/Dev1/PFI1", "/Dev1…
 ```
 
 One can index into the dictionary to get a list of channels:
 
 ```
 julia> getproperties("Dev1")["AIPhysicalChans"]
-(SubString{ASCIIString}["Dev1/ai0","Dev1/ai1","Dev1/ai2","Dev1/ai3","Dev1/ai4","Dev1/ai5","Dev1/ai6","Dev1/ai7"],false)
+(SubString{String}["Dev1/ai0", "Dev1/ai1", "Dev1/ai2", "Dev1/ai3", "Dev1/ai4", "Dev1/ai5", "Dev1/ai6", "Dev1/ai7"], false)
 ```
 
 A bit simpler in this case though is to use another high-level function
@@ -154,7 +166,7 @@ which returns just the string Array:
 
 ```
 julia> analog_input_channels("Dev1")
-8-element Array{String,1}:
+8-element Vector{String}:
  "Dev1/ai0"
  "Dev1/ai1"
  "Dev1/ai2"
@@ -169,10 +181,10 @@ To add, for example, analog input channels, use the high-level `analog_input` fu
 
 ```
 julia> t = analog_input("Dev1/ai0:1")
-NIDAQ.AITask(Ptr{Nothing} @0x0000000025d18600)
+NIDAQ.AITask(Ptr{Nothing}(0x000001d384e0cf00))
 
 julia> typeof(t)
-NIDAQ.AITask (constructor with 3 methods)
+NIDAQ.AITask
 
 julia> supertype(NIDAQ.AITask)
 NIDAQ.Task
@@ -200,71 +212,81 @@ docstring of each function for its keywords.
 
 ```
 julia> getproperties(t)
-Dict{String,Tuple{Any,Bool}} with 5 entries:
-  "Devices"    => (SubString{String}["Dev1"],false)
-  "Channels"   => (SubString{String}["Dev1/ai0","Dev1/ai1","Dev1/ai2"],false)
-  "Name"       => (SubString{String}["_unnamedTask<0>"],false)
-  "NumChans"   => (0x00000003,false)
-  "NumDevices" => (0x00000001,false)
+Dict{String, Tuple{Any, Bool}} with 6 entries:
+  "Channels"   => (SubString{String}["Dev1/ai0", "Dev1/ai1", "Dev1/ai2"], false)
+  "Complete"   => (true, false)
+  "Devices"    => (SubString{String}["Dev1"], false)
+  "Name"       => (SubString{String}["_unnamedTask<0>"], false)
+  "NumChans"   => (0x00000003, false)
+  "NumDevices" => (0x00000001, false)
 ```
 
 as well as a string containing the name of the channel:
 
 ```
 julia> getproperties(t, "Dev1/ai0")
-Dict{String,Tuple{Any,Bool}} with 52 entries:
-  "AccelUnits"                        => (:Val_g,false)
-  "AutoZeroMode"                      => (:Val_None,false)
-  "BridgeUnits"                       => (:Val_VoltsPerVolt,false)
-  "ChanCalDesc"                       => (SubString{String}[""],false)
-  "ChanCalOperatorName"               => (SubString{String}[""],false)
-  "ChanCalPolyForwardCoeff"           => (Float64[],false)
-  "ChanCalPolyReverseCoeff"           => (Float64[],false)
-  "ChanCalScaleType"                  => (:Val_Table,false)
-  "ChanCalTablePreScaledVals"         => (Float64[],false)
-  "ChanCalTableScaledVals"            => (Float64[],false)
-  "ChanCalVerifAcqVals"               => (Float64[],false)
-  "ChanCalVerifRefVals"               => (Float64[],false)
-  "Coupling"                          => (:Val_DC,false)
-  "CurrentACRMSUnits"                 => (:Val_Amps,false)
-  "CurrentUnits"                      => (:Val_Amps,false)
-  "CustomScaleName"                   => (SubString{String}[""],false)
-  "DataXferMech"                      => (:Val_ProgrammedIO,false)
-  "DataXferReqCond"                   => (:Val_OnBrdMemNotEmpty,false)
-  "DevScalingCoeff"                   => ([0.000102924,0.000312673,5.87393e-14,-3.31855e-19],false)
-  "EddyCurrentProxProbeUnits"         => (:Val_Meters,false)
-  "ForceUnits"                        => (:Val_Newtons,false)
-  "FreqUnits"                         => (:Val_Hz,false)
-  "Gain"                              => (1.0,false)
-  "InputSrc"                          => (SubString{String}["_external_channel"],false)
-  "LVDTUnits"                         => (:Val_Meters,false)
-  "LossyLSBRemovalCompressedSampSize" => (0x00000010,false)
-  "Max"                               => (10.0,false)
-  "MeasType"                          => (:Val_Voltage,false)
-  "Min"                               => (-10.0,false)
-  "PressureUnits"                     => (:Val_PoundsPerSquareInch,false)
-  "RVDTUnits"                         => (:Val_Degrees,false)
-  "RawDataCompressionType"            => (:Val_None,false)
-  "RawSampJustification"              => (:Val_RightJustified,false)
-  "RawSampSize"                       => (0x00000010,false)
-  "ResistanceUnits"                   => (:Val_Ohms,false)
-  "Resolution"                        => (16.0,false)
-  "ResolutionUnits"                   => (:Val_Bits,false)
-  "RngHigh"                           => (10.0,false)
-  "RngLow"                            => (-10.0,false)
-  "SoundPressureUnits"                => (:Val_Pascals,false)
-  "StrainGageCfg"                     => (:Val_FullBridgeI,false)
-  "StrainUnits"                       => (:Val_Strain,false)
-  "TempUnits"                         => (:Val_DegC,false)
-  "TermCfg"                           => (:Val_Diff,false)
-  "ThrmcplCJCVal"                     => (25.0,false)
-  "TorqueUnits"                       => (:Val_NewtonMeters,false)
-  "UsbXferReqCount"                   => (0x00000004,false)
-  "UsbXferReqSize"                    => (0x00008000,false)
-  "VelocityUnits"                     => (:Val_MetersPerSecond,false)
-  "VoltageACRMSUnits"                 => (:Val_Volts,false)
-  "VoltageUnits"                      => (:Val_Volts,false)
-  "VoltagedBRef"                      => (1.0,false)
+Dict{String, Tuple{Any, Bool}} with 61 entries:
+  "AccelUnits"                        => (:Val_g, true)
+  "BridgeUnits"                       => (:Val_VoltsPerVolt, true)
+  "CalculatedPowerCurrentMax"         => (10.0, true)
+  "CalculatedPowerCurrentMin"         => (-10.0, true)
+  "CalculatedPowerVoltageMax"         => (10.0, true)
+  "CalculatedPowerVoltageMin"         => (-10.0, true)
+  "ChanCalApplyCalIfExp"              => (false, true)
+  "ChanCalDesc"                       => (SubString{String}[""], true)
+  "ChanCalEnableCal"                  => (false, true)
+  "ChanCalHasValidCalInfo"            => (false, false)
+  "ChanCalOperatorName"               => (SubString{String}[""], true)
+  "ChanCalPolyForwardCoeff"           => (Float64[], true)
+  "ChanCalPolyReverseCoeff"           => (Float64[], true)
+  "ChanCalScaleType"                  => (:Val_Table, true)
+  "ChanCalTablePreScaledVals"         => (Float64[], true)
+  "ChanCalTableScaledVals"            => (Float64[], true)
+  "ChanCalVerifAcqVals"               => (Float64[], true)
+  "ChanCalVerifRefVals"               => (Float64[], true)
+  "ChargeUnits"                       => (:Val_Coulombs, true)
+  "CurrentACRMSUnits"                 => (:Val_Amps, true)
+  "CurrentUnits"                      => (:Val_Amps, true)
+  "CustomScaleName"                   => (SubString{String}[""], true)
+  "DataXferMech"                      => (:Val_ProgrammedIO, true)
+  "DataXferReqCond"                   => (:Val_OnBrdMemNotEmpty, true)
+  "DevScalingCoeff"                   => ([-0.00373988, 0.00128698], false)
+  "EddyCurrentProxProbeUnits"         => (:Val_Meters, true)
+  "ForceReadFromChan"                 => (false, true)
+  "ForceUnits"                        => (:Val_Newtons, true)
+  "FreqUnits"                         => (:Val_Hz, true)
+  "Gain"                              => (1.0, true)
+  "InputSrc"                          => (SubString{String}[""], true)
+  "IsTEDS"                            => (false, false)
+  "LVDTUnits"                         => (:Val_Meters, true)
+  "LossyLSBRemovalCompressedSampSize" => (0x00000010, true)
+  "Max"                               => (10.0, true)
+  "MeasType"                          => (:Val_Voltage, false)
+  "MemMapEnable"                      => (false, true)
+  "Min"                               => (-10.0, true)
+  "PowerUnits"                        => (:Val_Watts, true)
+  "PressureUnits"                     => (:Val_PoundsPerSquareInch, true)
+  "RVDTUnits"                         => (:Val_Degrees, true)
+  "RawDataCompressionType"            => (:Val_None, true)
+  "RawSampJustification"              => (:Val_RightJustified, false)
+  "RawSampSize"                       => (0x00000010, false)
+  "ResistanceUnits"                   => (:Val_Ohms, true)
+  "Resolution"                        => (14.0, false)
+  "ResolutionUnits"                   => (:Val_Bits, false)
+  "RngHigh"                           => (10.0, true)
+  "RngLow"                            => (-10.0, true)
+  "SoundPressureUnits"                => (:Val_Pascals, true)
+  "StrainUnits"                       => (:Val_Strain, true)
+  "TempUnits"                         => (:Val_DegC, true)
+  "TermCfg"                           => (:Val_Diff, true)
+  "ThrmcplCJCVal"                     => (25.0, true)
+  "TorqueUnits"                       => (:Val_NewtonMeters, true)
+  "UsbXferReqCount"                   => (0x00000001, true)
+  "UsbXferReqSize"                    => (0x00008000, true)
+  "VelocityUnits"                     => (:Val_MetersPerSecond, true)
+  "VoltageACRMSUnits"                 => (:Val_Volts, true)
+  "VoltageUnits"                      => (:Val_Volts, true)
+  "VoltagedBRef"                      => (1.0, true)
 ```
 
 Use `setproperty!` to change a mutable property, and `getproperty` to read a
@@ -274,12 +296,12 @@ single one back without fetching all of them:
 julia> setproperty!(t, "Dev1/ai0", "Max", 5.0)
 
 julia> getproperty(t, "Dev1/ai0", "Max")
-5.0
+10.0
 ```
 
-(Note that when queried, `Max` and `Min` are reported coerced to the closest
-range the device supports, so on a device with only a ±10 V range the above
-returns 10.0.)
+When queried, `Max` and `Min` are reported coerced to the closest range the
+device supports.  The USB-6001 has only a ±10 V range, which is why 5.0 reads
+back as 10.0 above; on a device with a ±5 V range it would read back as 5.0.
 
 Once everything is configured, get some data using the `read` function:
 
@@ -287,17 +309,17 @@ Once everything is configured, get some data using the `read` function:
 julia> start(t)
 
 julia> read(t, 10)
-10x3 Array{Float64,2}:
- 1.52407   -0.448835   0.381075
- 1.37546   -0.213537   0.305847
- 1.2363    -0.0268698  0.262826
- 1.109      0.118619   0.243117
- 0.995797   0.2311     0.240073
- 0.896695   0.315782   0.248004
- 0.811452   0.378752   0.262746
- 0.739429   0.424257   0.281893
- 0.679263   0.456223   0.302402
- 0.629672   0.477774   0.323473
+10×3 Matrix{Float64}:
+ -0.285588  -0.307466  -0.268857
+ -0.270144  -0.28044   -0.28044
+ -0.274005  -0.272718  -0.28044
+ -0.275292  -0.271431  -0.28044
+ -0.275292  -0.271431  -0.279153
+ -0.275292  -0.271431  -0.279153
+ -0.275292  -0.270144  -0.279153
+ -0.274005  -0.270144  -0.279153
+ -0.274005  -0.270144  -0.279153
+ -0.274005  -0.270144  -0.279153
 
 julia> stop(t)
 
@@ -309,17 +331,17 @@ those types as an additional argument:
 
 ```
 julia> read(t, 10, Int16)
-10×3 Array{Int16,2}:
- -12619  -5351  -13973
- -12618  -5350  -13973
- -12620  -5350  -13973
- -12619  -5350  -13974
- -12618  -5351  -13972
- -12618  -5348  -13974
- -12619  -5350  -13973
- -12619  -5350  -13973
- -12619  -5350  -13972
- -12620  -5350  -13973
+10×3 Matrix{Int16}:
+ -207  -220  -196
+ -197  -202  -204
+ -199  -198  -205
+ -200  -196  -204
+ -199  -196  -204
+ -200  -196  -204
+ -200  -196  -203
+ -200  -196  -203
+ -200  -196  -203
+ -199  -195  -203
 ```
 
 The result is always a matrix with one column per channel.  Omit the number
@@ -336,7 +358,7 @@ so there is no method which adds a channel to an existing task, and
 
 ```
 julia> t = count_edges("Dev1/ctr0"; edge=:falling, direction=:up, initial_count=7)
-NIDAQ.CITask(Ptr{Nothing} @0x0000000005a1c2e0)
+NIDAQ.CITask(Ptr{Nothing}(0x000001d384e0cf00))
 
 julia> start(t)
 
