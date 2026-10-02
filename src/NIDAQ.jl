@@ -39,10 +39,6 @@ export counter_input_channels,          counter_output_channels
 
 const NIDAQmx = Sys.iswindows() ? "C:\\Windows\\System32\\nicaiu.dll" :
     "/usr/lib/x86_64-linux-gnu/libnidaqmx.so"
-# the wrappers for NI-DAQmx 18.6 through 21.3 were generated with an older
-# Clang.jl which emitted Cstring for char buffers the driver fills in; those
-# files were hand-edited to use this instead.  newer wrappers use Ptr{Cchar}.
-const SafeCstring = Ref{UInt8}
 
 # the driver's bool32 is a 32-bit integer; a distinct type lets getproperties
 # tell boolean properties apart from unsigned ones
@@ -66,6 +62,11 @@ try
 catch
   error("can not determine NIDAQmx version.")
 end
+
+# the test suite loads each shipped wrapper in turn against whatever driver is
+# installed, which works because the C API only ever grows.  this is for that;
+# if you set it yourself, remember that the choice is baked in at precompilation
+ver = get(ENV, "NIDAQ_WRAPPER_VERSION", ver)
 
 try
   include("constants_V$ver.jl")
@@ -230,9 +231,8 @@ for f in (:analog_input, :analog_output,
     end
 end
 
-str2code(s::String) = str2code(Val(Cchar), s)
-str2code(::Val{Cchar}, s::String) = Ref(Cchar.(codeunits(s * '\0')),1)
-str2code(::Val{UInt8}, s::String) = Ref(codeunits(s),1)
+# a NUL-terminated buffer of Cchar for passing a string to the driver
+str2code(s::String) = Ref(Cchar.(codeunits(s * '\0')), 1)
 
 @doc """`read(task, nsamples=-1, T=Float64) -> Matrix{T}`
 

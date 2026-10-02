@@ -12,39 +12,41 @@ Similar functionality for the Python language is provided by
 
 System Requirements
 ===================
-**General**
-- Supports Windows and Linux
-- NI-DAQmx Base is not supported  
-
-**Linux specific**  
-- USB DAQ devices are not supported
+- Windows.  The package has a Linux code path too, but it is untested.
+- NI-DAQmx 18.6 or later; see the table below.
+- Julia 1.10 or later.
+- NI-DAQmx Base is not supported.
 
 Installation
 ============
-**Windows**  
-First download and install NI-DAQmx version
-[26.5](https://www.ni.com/en/support/downloads/drivers/download.ni-daq-mx.html#484356) (or
-[23.5](https://www.ni.com/en/support/downloads/drivers/download.ni-daq-mx.html#484356),
-[21.3](https://www.ni.com/de-de/support/downloads/drivers/download.ni-daqmx.html#428058),
-[20.1](https://www.ni.com/en-us/support/downloads/drivers/download.ni-daqmx.html#348669),
-[19.6](https://www.ni.com/en-us/support/downloads/drivers/download/packaged.ni-daqmx.333268.html), 
-[18.6](http://www.ni.com/en-us/support/downloads/drivers/download/unpackaged.ni-daqmx.291872.html);
-or for Julia 0.6, [17.1.0](http://www.ni.com/download/ni-daqmx-17.1/6836/en/);
-or for Julia 0.5, [16.0.0](http://www.ni.com/download/ni-daqmx-16.0/6120/en/);
-or for Julia 0.4, [15.1.1](http://www.ni.com/download/ni-daqmx-15.1.1/5665/en/);
-or for Julia 0.3, [14.1.0](http://www.ni.com/download/ni-daqmx-14.1/4953/en/),
-[14.0.0](http://www.ni.com/download/ni-daqmx-14.0/4918/en/), or
-[9.6.0](http://www.ni.com/download/ni-daqmx-9.6/3423/en/)) from National
-Instruments.
-
-**Linux**  
-The package supports DAQmx 21.3 (only First Look for Ubuntu) and DAQmx 20.1 on linux. Follow the instructions from this [support doc](https://www.ni.com/en-us/support/documentation/supplemental/18/downloading-and-installing-ni-driver-software-on-linux-desktop.html).
-
-**Adding `NIDAQ.jl`**  
-Then on the Julia command line:
+First download and install
+[NI-DAQmx](https://www.ni.com/en/support/downloads/drivers/download.ni-daq-mx.html)
+from National Instruments.  Then on the Julia command line:
 ```
 ]add NIDAQ
 ```
+
+NIDAQ.jl ships a wrapper for each NI-DAQmx version it supports and loads the
+one which matches the installed driver.  Which drivers are supported therefore
+depends on the version of NIDAQ.jl, not on the version of Julia:
+
+| NIDAQ.jl | Julia         | NI-DAQmx                            |
+|----------|---------------|-------------------------------------|
+| 0.7      | 1.10 or later | 18.6, 19.6, 20.1, 21.3, 23.5, 26.5  |
+| 0.6      | 0.7 to 1.10   | 18.6, 19.6, 20.1                    |
+| 0.5      | 0.7 to 1.10   | 18.6, 19.6                          |
+| 0.4      | 0.7 to 1.10   | 18.6                                |
+| 0.3      | 0.6           | 9.6, 14.0, 14.1, 15.1.1, 16.0, 17.1 |
+| 0.2      | 0.5           | 9.6, 14.0, 14.1, 15.1.1, 16.0       |
+
+Every wrapper in 0.7 is exercised by the test suite against whichever driver
+is installed, which checks the wrapper's calling conventions but not the older
+drivers themselves.  If you must use a driver older than 18.6, pin NIDAQ.jl to
+a release which supported it, for example:
+```
+]add NIDAQ@0.3
+```
+Those releases are unmaintained.
 
 **Upgrading**  
 Version 0.7 changes the high-level API in several breaking ways.  See
