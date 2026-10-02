@@ -387,31 +387,31 @@ function DAQmxResetChanAttribute(taskHandle, channel, attribute)
 end
 
 function DAQmxCfgSampClkTiming(taskHandle, source, rate, activeEdge, sampleMode, sampsPerChan)
-    ccall((:DAQmxCfgSampClkTiming, NIDAQmx), int32, (TaskHandle, Ptr{Cchar}, float64, int32, int32, Cint), taskHandle, source, rate, activeEdge, sampleMode, sampsPerChan)
+    ccall((:DAQmxCfgSampClkTiming, NIDAQmx), int32, (TaskHandle, Ptr{Cchar}, float64, int32, int32, uInt64), taskHandle, source, rate, activeEdge, sampleMode, sampsPerChan)
 end
 
 function DAQmxCfgHandshakingTiming(taskHandle, sampleMode, sampsPerChan)
-    ccall((:DAQmxCfgHandshakingTiming, NIDAQmx), int32, (TaskHandle, int32, Cint), taskHandle, sampleMode, sampsPerChan)
+    ccall((:DAQmxCfgHandshakingTiming, NIDAQmx), int32, (TaskHandle, int32, uInt64), taskHandle, sampleMode, sampsPerChan)
 end
 
 function DAQmxCfgBurstHandshakingTimingImportClock(taskHandle, sampleMode, sampsPerChan, sampleClkRate, sampleClkSrc, sampleClkActiveEdge, pauseWhen, readyEventActiveLevel)
-    ccall((:DAQmxCfgBurstHandshakingTimingImportClock, NIDAQmx), int32, (TaskHandle, int32, Cint, float64, Ptr{Cchar}, int32, int32, int32), taskHandle, sampleMode, sampsPerChan, sampleClkRate, sampleClkSrc, sampleClkActiveEdge, pauseWhen, readyEventActiveLevel)
+    ccall((:DAQmxCfgBurstHandshakingTimingImportClock, NIDAQmx), int32, (TaskHandle, int32, uInt64, float64, Ptr{Cchar}, int32, int32, int32), taskHandle, sampleMode, sampsPerChan, sampleClkRate, sampleClkSrc, sampleClkActiveEdge, pauseWhen, readyEventActiveLevel)
 end
 
 function DAQmxCfgBurstHandshakingTimingExportClock(taskHandle, sampleMode, sampsPerChan, sampleClkRate, sampleClkOutpTerm, sampleClkPulsePolarity, pauseWhen, readyEventActiveLevel)
-    ccall((:DAQmxCfgBurstHandshakingTimingExportClock, NIDAQmx), int32, (TaskHandle, int32, Cint, float64, Ptr{Cchar}, int32, int32, int32), taskHandle, sampleMode, sampsPerChan, sampleClkRate, sampleClkOutpTerm, sampleClkPulsePolarity, pauseWhen, readyEventActiveLevel)
+    ccall((:DAQmxCfgBurstHandshakingTimingExportClock, NIDAQmx), int32, (TaskHandle, int32, uInt64, float64, Ptr{Cchar}, int32, int32, int32), taskHandle, sampleMode, sampsPerChan, sampleClkRate, sampleClkOutpTerm, sampleClkPulsePolarity, pauseWhen, readyEventActiveLevel)
 end
 
 function DAQmxCfgChangeDetectionTiming(taskHandle, risingEdgeChan, fallingEdgeChan, sampleMode, sampsPerChan)
-    ccall((:DAQmxCfgChangeDetectionTiming, NIDAQmx), int32, (TaskHandle, Ptr{Cchar}, Ptr{Cchar}, int32, Cint), taskHandle, risingEdgeChan, fallingEdgeChan, sampleMode, sampsPerChan)
+    ccall((:DAQmxCfgChangeDetectionTiming, NIDAQmx), int32, (TaskHandle, Ptr{Cchar}, Ptr{Cchar}, int32, uInt64), taskHandle, risingEdgeChan, fallingEdgeChan, sampleMode, sampsPerChan)
 end
 
 function DAQmxCfgImplicitTiming(taskHandle, sampleMode, sampsPerChan)
-    ccall((:DAQmxCfgImplicitTiming, NIDAQmx), int32, (TaskHandle, int32, Cint), taskHandle, sampleMode, sampsPerChan)
+    ccall((:DAQmxCfgImplicitTiming, NIDAQmx), int32, (TaskHandle, int32, uInt64), taskHandle, sampleMode, sampsPerChan)
 end
 
 function DAQmxCfgPipelinedSampClkTiming(taskHandle, source, rate, activeEdge, sampleMode, sampsPerChan)
-    ccall((:DAQmxCfgPipelinedSampClkTiming, NIDAQmx), int32, (TaskHandle, Ptr{Cchar}, float64, int32, int32, Cint), taskHandle, source, rate, activeEdge, sampleMode, sampsPerChan)
+    ccall((:DAQmxCfgPipelinedSampClkTiming, NIDAQmx), int32, (TaskHandle, Ptr{Cchar}, float64, int32, int32, uInt64), taskHandle, source, rate, activeEdge, sampleMode, sampsPerChan)
 end
 
 function DAQmxResetTimingAttribute(taskHandle, attribute)
@@ -9939,11 +9939,11 @@ function DAQmxResetLoggingPause(taskHandle)
 end
 
 function DAQmxGetLoggingSampsPerFile(taskHandle, data)
-    ccall((:DAQmxGetLoggingSampsPerFile, NIDAQmx), int32, (TaskHandle, Ptr{Cint}), taskHandle, data)
+    ccall((:DAQmxGetLoggingSampsPerFile, NIDAQmx), int32, (TaskHandle, Ptr{uInt64}), taskHandle, data)
 end
 
 function DAQmxSetLoggingSampsPerFile(taskHandle, data)
-    ccall((:DAQmxSetLoggingSampsPerFile, NIDAQmx), int32, (TaskHandle, Cint), taskHandle, data)
+    ccall((:DAQmxSetLoggingSampsPerFile, NIDAQmx), int32, (TaskHandle, uInt64), taskHandle, data)
 end
 
 function DAQmxResetLoggingSampsPerFile(taskHandle)
@@ -9963,11 +9963,11 @@ function DAQmxResetLoggingFileWriteSize(taskHandle)
 end
 
 function DAQmxGetLoggingFilePreallocationSize(taskHandle, data)
-    ccall((:DAQmxGetLoggingFilePreallocationSize, NIDAQmx), int32, (TaskHandle, Ptr{Cint}), taskHandle, data)
+    ccall((:DAQmxGetLoggingFilePreallocationSize, NIDAQmx), int32, (TaskHandle, Ptr{uInt64}), taskHandle, data)
 end
 
 function DAQmxSetLoggingFilePreallocationSize(taskHandle, data)
-    ccall((:DAQmxSetLoggingFilePreallocationSize, NIDAQmx), int32, (TaskHandle, Cint), taskHandle, data)
+    ccall((:DAQmxSetLoggingFilePreallocationSize, NIDAQmx), int32, (TaskHandle, uInt64), taskHandle, data)
 end
 
 function DAQmxResetLoggingFilePreallocationSize(taskHandle)
@@ -9975,7 +9975,7 @@ function DAQmxResetLoggingFilePreallocationSize(taskHandle)
 end
 
 function DAQmxGetReadCurrReadPos(taskHandle, data)
-    ccall((:DAQmxGetReadCurrReadPos, NIDAQmx), int32, (TaskHandle, Ptr{Cint}), taskHandle, data)
+    ccall((:DAQmxGetReadCurrReadPos, NIDAQmx), int32, (TaskHandle, Ptr{uInt64}), taskHandle, data)
 end
 
 function DAQmxGetReadAvailSampPerChan(taskHandle, data)
@@ -9983,7 +9983,7 @@ function DAQmxGetReadAvailSampPerChan(taskHandle, data)
 end
 
 function DAQmxGetReadTotalSampPerChanAcquired(taskHandle, data)
-    ccall((:DAQmxGetReadTotalSampPerChanAcquired, NIDAQmx), int32, (TaskHandle, Ptr{Cint}), taskHandle, data)
+    ccall((:DAQmxGetReadTotalSampPerChanAcquired, NIDAQmx), int32, (TaskHandle, Ptr{uInt64}), taskHandle, data)
 end
 
 function DAQmxGetReadCommonModeRangeErrorChansExist(taskHandle, data)
@@ -10547,11 +10547,11 @@ function DAQmxResetSampQuantSampMode(taskHandle)
 end
 
 function DAQmxGetSampQuantSampPerChan(taskHandle, data)
-    ccall((:DAQmxGetSampQuantSampPerChan, NIDAQmx), int32, (TaskHandle, Ptr{Cint}), taskHandle, data)
+    ccall((:DAQmxGetSampQuantSampPerChan, NIDAQmx), int32, (TaskHandle, Ptr{uInt64}), taskHandle, data)
 end
 
 function DAQmxSetSampQuantSampPerChan(taskHandle, data)
-    ccall((:DAQmxSetSampQuantSampPerChan, NIDAQmx), int32, (TaskHandle, Cint), taskHandle, data)
+    ccall((:DAQmxSetSampQuantSampPerChan, NIDAQmx), int32, (TaskHandle, uInt64), taskHandle, data)
 end
 
 function DAQmxResetSampQuantSampPerChan(taskHandle)
@@ -13271,7 +13271,7 @@ function DAQmxResetWriteRegenMode(taskHandle)
 end
 
 function DAQmxGetWriteCurrWritePos(taskHandle, data)
-    ccall((:DAQmxGetWriteCurrWritePos, NIDAQmx), int32, (TaskHandle, Ptr{Cint}), taskHandle, data)
+    ccall((:DAQmxGetWriteCurrWritePos, NIDAQmx), int32, (TaskHandle, Ptr{uInt64}), taskHandle, data)
 end
 
 function DAQmxGetWriteOvercurrentChansExist(taskHandle, data)
@@ -13335,7 +13335,7 @@ function DAQmxGetWriteSpaceAvail(taskHandle, data)
 end
 
 function DAQmxGetWriteTotalSampPerChanGenerated(taskHandle, data)
-    ccall((:DAQmxGetWriteTotalSampPerChanGenerated, NIDAQmx), int32, (TaskHandle, Ptr{Cint}), taskHandle, data)
+    ccall((:DAQmxGetWriteTotalSampPerChanGenerated, NIDAQmx), int32, (TaskHandle, Ptr{uInt64}), taskHandle, data)
 end
 
 function DAQmxGetWriteAccessoryInsertionOrRemovalDetected(taskHandle, data)

@@ -10,8 +10,17 @@ on the right.
 
 ### Requirements
 
-Julia 1.10 or later is required.  NI-DAQmx 18.6 through 26.5 are supported on
-Windows, and 20.1 and 21.3 on Linux.
+Julia 1.10 or later is required.  NI-DAQmx 18.6, 19.6, 20.1, 21.3, 23.5, and
+26.5 are supported on Windows.  Linux is no longer advertised as supported,
+because nobody has been able to test it; the code path remains.
+
+The wrappers for 18.6 through 23.5 did not work with Julia 1.11 or later
+before this release, and 23.5 did not work with clocked acquisition on any
+Julia.  They are patched to type strings as `Ptr{Cchar}` and 64-bit integers
+as 64-bit, and the test suite now loads every shipped wrapper in turn against
+the installed driver.  Setting the environment variable
+`NIDAQ_WRAPPER_VERSION` overrides which wrapper is loaded, which is what the
+tests use; the choice is baked in at precompilation.
 
 ### `read` and `write` extend Base
 
@@ -182,7 +191,7 @@ end
   `NIDAQ.str2code("")` rather than by hand.
 - Seventeen low-level wrappers which take or return 64-bit integers, including
   `CfgSampClkTiming` and `CfgImplicitTiming`, passed them as 32-bit in the
-  v23.5 wrapper.  This is fixed in the v26.5 wrapper.
+  v23.5 wrapper.  This is fixed.
 - Strings passed to the driver are NUL-terminated, which they were not on
   Julia 1.11 and later.
 - `analog_input_ranges` and `analog_output_ranges` remain deprecated in favour

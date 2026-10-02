@@ -411,3 +411,31 @@ end
     end
 end
 
+
+@testset "shipped wrappers" begin
+    # every wrapper must work with the current code.  each is loaded in a
+    # fresh process against the installed driver, which works because the C
+    # API only grows from one driver version to the next
+    src = joinpath(@__DIR__, "..", "src", "NIDAQ.jl")
+    smoke = """
+        include($(repr(src))); using .NIDAQ
+        d = devices()[1]
+        p = getproperties(d)
+        length(p) > 50 || error("only \$(length(p)) device properties")
+        if !isempty(first(p["AIPhysicalChans"][1]))
+            t = analog_input(d*"/ai0:1")
+            NIDAQ.catch_error(NIDAQ.CfgSampClkTiming(t.th, NIDAQ.str2code(""), 5000.0,
+                    NIDAQ.Val_Rising, NIDAQ.Val_FiniteSamps, UInt64(1000)))
+            start(t)
+            size(read(t)) == (1000, 2) || error("clocked read returned the wrong shape")
+            clear(t)
+        end
+        """
+    for f in filter(startswith("functions_V"), readdir(joinpath(@__DIR__, "..", "src")))
+        v = f[length("functions_V")+1:end-3]
+        cmd = addenv(`$(Base.julia_cmd()) --startup-file=no -e $smoke`, "NIDAQ_WRAPPER_VERSION" => v)
+        @testset "$v" begin
+            @test success(cmd)
+        end
+    end
+end

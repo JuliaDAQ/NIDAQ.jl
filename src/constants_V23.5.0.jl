@@ -14,14 +14,14 @@ const float32 = Cfloat
 
 const float64 = Cdouble
 
-const int64 = Cint
+const int64 = Clonglong
 
-const __int64 = Cuint
+const uInt64 = Culonglong
 
 const dType = Cchar
 
 struct CVITime
-    data::NTuple{1, UInt8}
+    data::NTuple{16, UInt8}
 end
 
 # function Base.getproperty(x::Ptr{CVITime}, f::Symbol)
@@ -42,7 +42,7 @@ end
 # end
 
 struct CVIAbsoluteTime
-    data::NTuple{1, UInt8}
+    data::NTuple{16, UInt8}
 end
 
 # function Base.getproperty(x::Ptr{CVIAbsoluteTime}, f::Symbol)
