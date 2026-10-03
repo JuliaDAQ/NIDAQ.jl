@@ -37,8 +37,27 @@ export analog_input_channels,           analog_output_channels
 export digital_input_channels,          digital_output_channels
 export counter_input_channels,          counter_output_channels
 
-const NIDAQmx = Sys.iswindows() ? "C:\\Windows\\System32\\nicaiu.dll" :
-    "/usr/lib/x86_64-linux-gnu/libnidaqmx.so"
+using Libdl
+using Preferences
+
+# the driver library.  find_library returns "" when it is not installed, in
+# which case keep the bare name so that the first call into the driver fails
+# with the loader's own "could not load library" message
+const driver_path = Libdl.find_library(["nicaiu", "libnidaqmx"])
+const NIDAQmx = isempty(driver_path) ? (Sys.iswindows() ? "nicaiu" : "libnidaqmx") : driver_path
+
+"""
+`driver_available() -> Bool`
+
+whether the NI-DAQmx driver library was found when NIDAQ.jl was loaded.  when
+it was not, NIDAQ.jl still loads, so that code using it can be developed and
+tested anywhere, but every call into the driver fails.
+"""
+driver_available() = !isempty(driver_path)
+
+# recompile when the driver is upgraded, so that the wrapper chosen below
+# tracks the installed version
+driver_available() && Base.include_dependency(Libdl.dlpath(NIDAQmx))
 
 # the driver's bool32 is a 32-bit integer; a distinct type lets getproperties
 # tell boolean properties apart from unsigned ones
@@ -46,33 +65,68 @@ primitive type Bool32<:Integer 32 end
 
 @static if VERSION >= v"1.11"
     eval(Expr(:public, :Task, :AITask, :AOTask, :DITask, :DOTask, :CITask, :COTask,
-                       :Bool32, :str2code))
+                       :Bool32, :str2code, :driver_available, :wrapper_version,
+                       :shipped_versions))
 end
 
-try
-  global ver
-  global major, minor, update  # bug in Julia v0.5 on windows?
-  major = Ref{UInt32}(0)
-  ccall((:DAQmxGetSysNIDAQMajorVersion,NIDAQmx),Int32,(Ref{UInt32},),major)
-  minor = Ref{UInt32}(0)
-  ccall((:DAQmxGetSysNIDAQMinorVersion,NIDAQmx),Int32,(Ref{UInt32},),minor)
-  update = Ref{UInt32}(0)
-  ccall((:DAQmxGetSysNIDAQUpdateVersion,NIDAQmx),Int32,(Ref{UInt32},),update)
-  ver = "$(major[]).$(minor[]).$(update[])"
-catch
-  error("can not determine NIDAQmx version.")
+# the version of the installed driver
+function installed_version()
+    major, minor, update = Ref{UInt32}(0), Ref{UInt32}(0), Ref{UInt32}(0)
+    ccall((:DAQmxGetSysNIDAQMajorVersion, NIDAQmx), Int32, (Ref{UInt32},), major)
+    ccall((:DAQmxGetSysNIDAQMinorVersion, NIDAQmx), Int32, (Ref{UInt32},), minor)
+    ccall((:DAQmxGetSysNIDAQUpdateVersion, NIDAQmx), Int32, (Ref{UInt32},), update)
+    VersionNumber(major[], minor[], update[])
 end
 
-# the test suite loads each shipped wrapper in turn against whatever driver is
-# installed, which works because the C API only ever grows.  this is for that;
-# if you set it yourself, remember that the choice is baked in at precompilation
-ver = get(ENV, "NIDAQ_WRAPPER_VERSION", ver)
+# the NI-DAQmx versions for which a wrapper ships with the package
+const shipped_versions = sort!([VersionNumber(m.captures[1])
+    for m in filter(!isnothing, match.(r"^functions_V(\d+\.\d+\.\d+)\.jl$", readdir(@__DIR__)))])
 
-try
-  include("constants_V$ver.jl")
-  include("functions_V$ver.jl")
-catch
-  error("NIDAQmx version $ver is not supported.")
+# the newest shipped wrapper not newer than the installed driver, which works
+# because the C API only grows from one version to the next; nothing if the
+# driver is older than every wrapper
+function select_wrapper(installed::VersionNumber, shipped = shipped_versions)
+    candidates = filter(<=(installed), shipped)
+    isempty(candidates) ? nothing : maximum(candidates)
+end
+
+# which wrapper to load, in order of precedence: the NIDAQ_WRAPPER_VERSION
+# environment variable, which the test suite uses to load each shipped wrapper
+# in turn; the wrapper_version preference, for pinning a wrapper on a machine
+# without the driver; the installed driver; and failing all of those the newest
+# wrapper, so that the package can at least be loaded.  the choice is made at
+# precompilation.  the preference and the driver library are both tracked, so
+# changing either recompiles; the environment variable is not, which is why
+# it is for the test suite only
+const wrapper_version, load_note = let
+    pinned = something(get(ENV, "NIDAQ_WRAPPER_VERSION", nothing),
+                       @load_preference("wrapper_version", nothing), Some(nothing))
+    if pinned !== nothing
+        v = VersionNumber(pinned)
+        v in shipped_versions ||
+            error("NIDAQ.jl has no wrapper for NI-DAQmx $v; it ships $(join(shipped_versions, ", "))")
+        v, nothing
+    elseif driver_available()
+        installed = installed_version()
+        selected = select_wrapper(installed)
+        selected === nothing &&
+            error("NI-DAQmx $installed is older than any version NIDAQ.jl supports; pin an older release of NIDAQ.jl, see the README")
+        selected, selected == installed ? nothing :
+            "NI-DAQmx $installed is installed; using the NIDAQ.jl wrapper for $selected"
+    else
+        maximum(shipped_versions), nothing
+    end
+end
+
+include("constants_V$wrapper_version.jl")
+include("functions_V$wrapper_version.jl")
+
+function __init__()
+    if !driver_available()
+        @warn "NI-DAQmx was not found, so NIDAQ.jl loaded its wrapper for $wrapper_version but every call into the driver will fail.  Install NI-DAQmx from ni.com and restart Julia."
+    elseif load_note !== nothing
+        @info load_note
+    end
 end
 
 # value => name for the signed Val_* enumeration constants, used to report
