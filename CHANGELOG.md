@@ -18,9 +18,22 @@ The wrappers for 18.6 through 23.5 did not work with Julia 1.11 or later
 before this release, and 23.5 did not work with clocked acquisition on any
 Julia.  They are patched to type strings as `Ptr{Cchar}` and 64-bit integers
 as 64-bit, and the test suite now loads every shipped wrapper in turn against
-the installed driver.  Setting the environment variable
-`NIDAQ_WRAPPER_VERSION` overrides which wrapper is loaded, which is what the
-tests use; the choice is baked in at precompilation.
+the installed driver.
+
+### Loading
+
+The driver library is found with `Libdl.find_library` rather than at two
+hard-coded paths.  The wrapper is still chosen when the package is
+precompiled, but the choice now tracks the driver: upgrading NI-DAQmx
+triggers recompilation, and a driver newer than any shipped wrapper gets the
+newest wrapper rather than an error, since the C API only grows.  Without the
+driver the package loads anyway, with a warning, and `driver_available()`
+reports the situation, so NIDAQ.jl can be developed and tested on machines
+without NI-DAQmx; that is what the new continuous-integration workflow does.
+A `wrapper_version` preference pins a wrapper regardless of the driver, and
+the `NIDAQ_WRAPPER_VERSION` environment variable does the same for the test
+suite.  `wrapper_version` and `shipped_versions` say what was loaded and what
+could have been.
 
 ### `read` and `write` extend Base
 

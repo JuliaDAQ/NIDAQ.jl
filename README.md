@@ -48,6 +48,19 @@ a release which supported it, for example:
 ```
 Those releases are unmaintained.
 
+If the installed driver is newer than any wrapper NIDAQ.jl ships, the newest
+wrapper is used, since NI only adds to the C API from one version to the next.
+To pin a particular wrapper regardless of the driver, for example to develop
+against NIDAQ.jl on a machine without NI-DAQmx installed, set a preference and
+restart Julia:
+```
+julia> using NIDAQ, Preferences
+
+julia> set_preferences!(NIDAQ, "wrapper_version" => "26.5.0")
+```
+Without the driver NIDAQ.jl still loads, with a warning, so that code which
+uses it can be developed and tested anywhere; only calls into the driver fail.
+
 **Upgrading**  
 Version 0.7 changes the high-level API in several breaking ways.  See
 [CHANGELOG.md](CHANGELOG.md) for what to change in code written for 0.6.
