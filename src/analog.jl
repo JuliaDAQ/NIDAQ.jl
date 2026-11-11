@@ -114,7 +114,7 @@ function analog_output(t::AOTask, channel::String; range=nothing)
             str2code(""),
             range[1], range[2],
             Val_Volts,
-            convert(Ptr{UInt8},C_NULL)) )
+            C_NULL) )
     nothing
 end
 
