@@ -208,6 +208,25 @@ function getproperties(t::Task, channel::String; warning=false)
 end
 
 """
+`getproperty(device,property) -> value`
+
+get the specified NIDAQ property of a device, without fetching the rest of
+them as `getproperties(device)` does
+"""
+function Base.getproperty(device::String, property::String)
+    _getproperty((str2code(device),), _property("Dev", property))
+end
+
+"""
+`getproperty(task,property) -> value`
+
+get the specified NIDAQ property of a task
+"""
+function Base.getproperty(t::Task, property::String)
+    _getproperty((t.th,), _property("Task", property))
+end
+
+"""
 `getproperty(task,channel,property) -> value`
 
 get the specified NIDAQ property of a channel

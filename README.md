@@ -192,6 +192,15 @@ julia> analog_input_channels("Dev1")
  "Dev1/ai7"
 ```
 
+When only one property is wanted, `getproperty` reads it alone, which is
+much quicker than fetching all of them:
+
+```
+julia> getproperty("Dev1", "ProductType")
+1-element Vector{SubString{String}}:
+ "USB-6001"
+```
+
 To add, for example, analog input channels, use the high-level `analog_input` function:
 
 ```
@@ -317,6 +326,13 @@ julia> getproperty(t, "Dev1/ai0", "Max")
 When queried, `Max` and `Min` are reported coerced to the closest range the
 device supports.  The USB-6001 has only a ±10 V range, which is why 5.0 reads
 back as 10.0 above; on a device with a ±5 V range it would read back as 5.0.
+
+Leave the channel out to read a property of the task itself:
+
+```
+julia> getproperty(t, "NumChans")
+0x00000003
+```
 
 Once everything is configured, get some data using the `read` function:
 

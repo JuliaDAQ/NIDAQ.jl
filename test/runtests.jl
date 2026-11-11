@@ -126,6 +126,8 @@ include(joinpath(@__DIR__, "..", "dev", "generate_valuesets.jl"))
     @test p.eltype === Float64 && p.scalar
     p = NIDAQ.property_table["Sys"]["DevNames"]
     @test isnothing(p.setter) && p.eltype === Cchar && !p.scalar
+    # so a misspelled property name is caught before the driver is asked
+    @test_throws ArgumentError getproperty("Dev1", "ProductTypo")
 
     # which wrapper gets loaded
     @test NIDAQ.driver_available() isa Bool

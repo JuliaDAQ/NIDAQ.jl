@@ -187,7 +187,9 @@ as `:SelfCal_Supported` because that is the id of an attribute, and the three
 `Int32` properties which are not enumerations, `BridgeBalanceCoarsePot`,
 `BridgeBalanceFinePot`, and `SampClkOverrunSentinelVal`.
 
-A new `getproperty(task, channel, property)` reads a single channel property.
+A new `getproperty` reads a single property without fetching the rest:
+`getproperty(device, property)`, `getproperty(task, property)`, and
+`getproperty(task, channel, property)`.
 `setproperty!` raises an `ArgumentError` for an unknown or read-only property
 instead of an `UndefVarError`.
 

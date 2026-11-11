@@ -21,6 +21,12 @@ end
         @test props["AICouplings"][1] isa Vector{Symbol}
         @test :Val_Bit_CouplingTypes_DC in props["AICouplings"][1]
         @test props["DITrigUsage"][1] isa Vector{Symbol}
+        # one property can be read on its own, decoded the same way, without
+        # the cost of fetching them all
+        @test getproperty(dev, "ProductType") == props["ProductType"][1]
+        @test getproperty(dev, "AICouplings") == props["AICouplings"][1]
+        @test (@elapsed getproperty(dev, "ProductType")) < 0.1
+        @test_throws ArgumentError getproperty(dev, "ProductTypo")
         @test typeof(analog_input_channels(dev)) == Vector{String}
         @test typeof(analog_output_channels(dev)) == Vector{String}
         @test typeof(digital_input_channels(dev)) == Vector{String}
@@ -97,6 +103,9 @@ end
         t = analog_input(dev*"/ai0")
         @test typeof(getproperties(t)) == Dict{String,Tuple{Any,Bool}}
         @test typeof(getproperties(t,dev*"/ai0")) == Dict{String,Tuple{Any,Bool}}
+        @test getproperty(t, "NumChans") === UInt32(1)
+        @test getproperty(t, "Channels") == [dev*"/ai0"]
+        @test_throws ArgumentError getproperty(t, "NumChan")
         @test typeof(t) == NIDAQ.AITask
         # querying AI.Max returns the value coerced to the device's ranges, so it
         # does not round-trip on devices with a single range; TermCfg does
