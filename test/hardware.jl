@@ -92,6 +92,10 @@ end
         @test getproperties(t, dev*"/ai0")["TermCfg"] == (:Val_RSE, true)
         @test getproperty(t, dev*"/ai0", "TermCfg") == :Val_RSE
         @test getproperty(t, dev*"/ai0", "Max") isa Float64
+        # values are named from the property's own value set: this one shares
+        # its number with Val_g, which belongs to a different property
+        @test getproperty(t, dev*"/ai0", "AccelUnits") == :Val_AccelUnit_g
+        @test channel_type(t, dev*"/ai0") == (:Val_AI, :Val_Voltage)
         @test_throws ArgumentError setproperty!(t, dev*"/ai0", "Maxx", 5.0)
         @test_throws ArgumentError getproperty(t, dev*"/ai0", "Maxx")
 
@@ -376,6 +380,7 @@ end
         d = devices()[1]
         p = getproperties(d)
         length(p) > 50 || error("only \$(length(p)) device properties")
+        p["BusType"][1] isa Symbol || error("BusType was not named: \$(p["BusType"][1])")
         if !isempty(first(p["AIPhysicalChans"][1]))
             t = analog_input(d*"/ai0:1")
             NIDAQ.catch_error(NIDAQ.CfgSampClkTiming(t.th, NIDAQ.str2code(""), 5000.0,

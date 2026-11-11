@@ -18,3 +18,7 @@ ctx = create_context(headers, args, options)
 
 # run generator
 build!(ctx)
+
+# record which constants each enumerated property can take
+include("generate_valuesets.jl")
+write_valuesets(joinpath(@__DIR__, "NIDAQmx.h"), joinpath(@__DIR__, "valuesets.jl"))
