@@ -300,13 +300,15 @@ end
 # a NUL-terminated buffer of Cchar for passing a string to the driver
 str2code(s::String) = Ref(Cchar.(codeunits(s * '\0')), 1)
 
-@doc """`read(task, nsamples=-1, T=Float64) -> Matrix{T}`
+@doc """`read(task, nsamples=-1, T=Float64; timeout=10.0) -> Matrix{T}`
 
 receive data from all analog or digital input channels in a NIDAQ task, one
 column per channel.  nsamples is the number of samples per channel; -1 reads
 every sample of a finite acquisition or everything currently buffered in a
 continuous one.  T is the element type, and for digital tasks defaults to
-UInt32.
+UInt32.  timeout is how long to wait, in seconds, for the samples to be
+acquired before raising an error; `Inf` waits forever, and 0 succeeds only if
+they are already available.
 
 some devices, USB ones at least, buffer nothing on the computer until data is
 first asked for.  the first `read(task)` of a continuous acquisition after
@@ -314,9 +316,12 @@ first asked for.  the first `read(task)` of a continuous acquisition after
 later ones return what has accumulated since.  reading in a loop is unaffected.
 """ read
 
-@doc """`write(task, data)`
+@doc """`write(task, data; timeout=10.0) -> samples written per channel`
 
-send data to all analog or digital channels in a NIDAQ task
+send data to all analog or digital output channels in a NIDAQ task.  data is a
+matrix with one column per channel, or a vector for a single channel.  timeout
+is how long to wait, in seconds, for room in the driver's buffer before raising
+an error; `Inf` waits forever.
 """ write
 
 end

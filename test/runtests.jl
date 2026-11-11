@@ -111,6 +111,14 @@ import LinearAlgebra
     @test NIDAQ.select_wrapper(v"22.0.0") == v"21.3.0"
     @test isnothing(NIDAQ.select_wrapper(v"17.1.0"))
     @test NIDAQ.select_wrapper(v"2.0.0", [v"1.0.0", v"3.0.0"]) == v"1.0.0"
+
+    # the timeout keyword of read and write is in seconds, Inf waiting forever
+    @test NIDAQ._timeout(2) === 2.0
+    @test NIDAQ._timeout(0) === 0.0
+    @test NIDAQ._timeout(Inf) === NIDAQ.DAQmx_Val_WaitInfinitely
+    @test NIDAQ._timeout(NIDAQ.default_timeout) === 10.0
+    @test_throws ArgumentError NIDAQ._timeout(-1)
+    @test_throws ArgumentError NIDAQ._timeout(NaN)
 end
 
 # everything else needs the driver and a device.  without them, as on a CI

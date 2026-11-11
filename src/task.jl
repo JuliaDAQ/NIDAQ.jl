@@ -57,10 +57,21 @@ function auto_samples(t::Task)
     Int(n[])
 end
 
+# how long, in seconds, read and write wait for the driver unless told
+# otherwise.  NI's own examples use this value
+const default_timeout = 10.0
+
+# the timeout keyword of read and write as the driver wants it: seconds, with
+# Inf meaning wait forever and 0 meaning try once
+function _timeout(seconds::Real)
+    seconds >= 0 || throw(ArgumentError("timeout must be a non-negative number of seconds, or Inf to wait forever, not $seconds"))
+    isinf(seconds) ? DAQmx_Val_WaitInfinitely : Float64(seconds)
+end
+
 # read `num_samples` per channel from every channel of a task into a freshly
 # allocated matrix, one column per channel.  a single channel yields a matrix
 # with one column, so the return type does not depend on the task
-function _read(t::Task, cfunction::F, ::Type{T}, num_samples::Integer) where {F,T}
+function _read(t::Task, cfunction::F, ::Type{T}, num_samples::Integer, timeout::Real) where {F,T}
     num_channels = Ref{Cuint}()
     catch_error(DAQmxGetTaskNumChans(t.th, num_channels))
     n = num_samples == -1 ? auto_samples(t) : Int(num_samples)
@@ -68,7 +79,7 @@ function _read(t::Task, cfunction::F, ::Type{T}, num_samples::Integer) where {F,
     num_samples_read = Ref{Int32}(0)
     catch_error( cfunction(t.th,
         Int32(n),
-        1.0,
+        _timeout(timeout),
         Val_GroupByChannel,
         data,
         UInt32(length(data)),
@@ -79,14 +90,16 @@ function _read(t::Task, cfunction::F, ::Type{T}, num_samples::Integer) where {F,
 end
 
 """
-`read!(data, task) -> data`
+`read!(data, task; timeout=10.0) -> data`
 
 fill a preallocated vector or matrix with samples from all analog or digital
 input channels in a NIDAQ task.  the number of rows is the number of samples
-read per channel, and there must be one column per channel.  counter tasks
-are not supported, as some counter measurements yield two vectors.
+read per channel, and there must be one column per channel.  timeout is how
+long to wait for them, in seconds, as for `read`.  counter tasks are not
+supported, as some counter measurements yield two vectors.
 """
-function Base.read!(data::VecOrMat{T}, t::Union{AITask,DITask}) where {T}
+function Base.read!(data::VecOrMat{T}, t::Union{AITask,DITask};
+                    timeout::Real = default_timeout) where {T}
     num_channels = Ref{Cuint}()
     catch_error(DAQmxGetTaskNumChans(t.th, num_channels))
     size(data, 2) == num_channels[] ||
@@ -95,7 +108,7 @@ function Base.read!(data::VecOrMat{T}, t::Union{AITask,DITask}) where {T}
     num_samples_read = Ref{Int32}(0)
     catch_error( read_cfunction(t, T)(t.th,
         Int32(num_samples),
-        1.0,
+        _timeout(timeout),
         Val_GroupByChannel,
         data,
         UInt32(length(data)),

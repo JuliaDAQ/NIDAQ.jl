@@ -132,8 +132,9 @@ end
 read_cfunction(::AITask, ::Type{T}) where T =
     throw(ArgumentError("analog input can be read as Float64, Int16, Int32, UInt16, or UInt32, not $T"))
 
-Base.read(t::AITask, num_samples_per_chan::Integer = -1, ::Type{T} = Float64) where T =
-    _read(t, read_cfunction(t, T), T, num_samples_per_chan)
+Base.read(t::AITask, num_samples_per_chan::Integer = -1, ::Type{T} = Float64;
+          timeout::Real = default_timeout) where T =
+    _read(t, read_cfunction(t, T), T, num_samples_per_chan, timeout)
 
 
 for (cfunction, types) in (
@@ -142,21 +143,21 @@ for (cfunction, types) in (
         (WriteBinaryI32, Int32),
         (WriteBinaryU16, UInt16),
         (WriteBinaryU32, UInt32))
-    @eval function Base.write(t::AOTask, data::Matrix{$types})
+    @eval function Base.write(t::AOTask, data::Matrix{$types}; timeout::Real = default_timeout)
         num_samples_per_chan::Int32 = size(data, 1)
         data = reshape(data, length(data))
         num_samples_per_chan_written = Int32[0]
         catch_error( $cfunction(t.th,
             num_samples_per_chan,
             false,   # do not start the task automatically
-            1.0,
+            _timeout(timeout),
             Val_GroupByChannel,
             Ref(data,1),
             Ref(num_samples_per_chan_written,1),
             Ptr{Bool32}(C_NULL)) )
         num_samples_per_chan_written[1]
     end
-    @eval Base.write(t::AOTask, data::Vector{$types}) =
-        Base.write(t, reshape(data,(length(data),1)))
+    @eval Base.write(t::AOTask, data::Vector{$types}; timeout::Real = default_timeout) =
+        Base.write(t, reshape(data,(length(data),1)); timeout)
 end
 

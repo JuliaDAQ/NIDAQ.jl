@@ -128,6 +128,8 @@ end
         # the return type is inferable and does not depend on the channel count
         @test (@inferred NIDAQ.read(t, 3)) isa Matrix{Float64}
         @test (@inferred NIDAQ.read(t, 3, Int16)) isa Matrix{Int16}
+        @test (@inferred read(t, 3; timeout=2)) isa Matrix{Float64}
+        @test_throws ArgumentError read(t, 3; timeout=-1)
         @test size(NIDAQ.read(t, 3)) == (3, 1)
         @test_throws ArgumentError NIDAQ.read(t, 3, Float32)
         buf1 = Vector{Float64}(undef, 3)
@@ -163,6 +165,23 @@ end
         @test isnothing(start(t))
         @test size(NIDAQ.read(t)) == (2000, 2)
         @test isnothing(stop(t))
+        # an acquisition lasting more than a second, which the old fixed
+        # one-second timeout could not read.  a read which times out loses
+        # nothing, and the default timeout is long enough to wait it out
+        @test NIDAQ.CfgSampClkTiming(t.th, NIDAQ.str2code(""), 1000.0, NIDAQ.Val_Rising,
+                NIDAQ.Val_FiniteSamps, UInt64(1500)) == 0
+        @test isnothing(start(t))
+        @test_throws ErrorException read(t; timeout=0.1)
+        @test size(read(t)) == (1500, 2)
+        @test isnothing(stop(t))
+        @test isnothing(start(t))
+        @test size(read(t; timeout=Inf)) == (1500, 2)
+        @test isnothing(stop(t))
+        @test isnothing(start(t))
+        buf4 = Matrix{Float64}(undef, 1500, 2)
+        @test_throws ErrorException read!(buf4, t; timeout=0)
+        @test read!(buf4, t; timeout=5) === buf4
+        @test isnothing(stop(t))
         @test isnothing(clear(t))
     end
 end
@@ -175,6 +194,8 @@ end
         @test typeof(t) == NIDAQ.AOTask
         @test isnothing(start(t))
         @test NIDAQ.write(t, rand(3)) == 3
+        @test write(t, rand(3); timeout=2) == 3
+        @test write(t, rand(3, 1); timeout=Inf) == 3
         @test isnothing(stop(t))
         @test isnothing(analog_output(t, dev*"/ao1"))
         @test isnothing(start(t))
@@ -202,6 +223,7 @@ end
         @test length(NIDAQ.read(t, 3)) == 3
         @test (@inferred NIDAQ.read(t, 3)) isa Matrix{UInt32}
         @test (@inferred NIDAQ.read(t, 3, UInt8)) isa Matrix{UInt8}
+        @test size(read(t, 3; timeout=2)) == (3, 1)
         buf1 = Vector{UInt32}(undef, 3)
         @test read!(buf1, t) === buf1
         @test all(x -> x in (0, 1), buf1)
@@ -242,6 +264,7 @@ end
         @test typeof(t) == NIDAQ.DOTask
         @test isnothing(start(t))
         @test NIDAQ.write(t, round.(UInt32, [1,0,1,0,1,0])) == 6
+        @test write(t, round.(UInt32, [1,0,1,0,1,0]); timeout=2) == 6
         @test isnothing(stop(t))
         @test isnothing(digital_output(t, dev*"/Port0/Line1"))
         @test isnothing(start(t))
@@ -303,6 +326,7 @@ end
         @test data isa Vector{UInt32}
         @test length(data) == 3
         @test length(read(t)) == 1   # an on-demand task yields one sample per read
+        @test length(read(t, 1; timeout=2)) == 1
         @test NIDAQ.task_channels(t) == [ch]
         @test isnothing(stop(t))
         @test isnothing(clear(t))

@@ -61,6 +61,15 @@ currently buffered in a continuous one, or one sample from an on-demand task.
 Unsupported element types raise an `ArgumentError` listing the valid ones
 instead of a `KeyError`.
 
+### `read` and `write` take a timeout
+
+`read`, `read!`, and `write` take a `timeout` keyword, in seconds, for how
+long to wait on the driver; `Inf` waits forever.  The default is 10.  It used
+to be fixed at 1, so an acquisition lasting more than a second could not be
+read without first calling `NIDAQ.WaitUntilTaskDone`, and failed with "Some or
+all of the samples requested have not yet been acquired".  Code which relied
+on a read failing within a second should pass `timeout=1`.
+
 ### `read!` sizes itself from the buffer
 
 `read!` takes only the buffer and the task, and works for digital as well as
