@@ -225,3 +225,8 @@ end
   Julia 1.11 and later.
 - `analog_input_ranges` and `analog_output_ranges` remain deprecated in favour
   of `analog_voltage_input_ranges` and `analog_voltage_output_ranges`.
+- For contributors: the wrapper for a driver version is now made by one
+  command, `julia --project=dev dev/generator.jl`, which finds the installed
+  driver's version and header itself and needs no hand edits afterwards.  The
+  tests regenerate the installed version's wrapper and compare it with what
+  is in `src`.  See "Adding Support for a Version of NI-DAQmx" in the README.

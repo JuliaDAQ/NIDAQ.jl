@@ -1,4 +1,7 @@
 [general]
 library_name = "NIDAQmx"
-output_api_file_path = "NIDAQmx.jl"
-output_common_file_path = "common.jl"
+
+# macros whose values are the C calling conventions __stdcall and __cdecl,
+# which mean nothing in Julia.  each entry is a regex which must match the
+# whole name.  the output paths are set in generator.jl
+output_ignorelist = ["__CFUNC", "CVICALLBACK"]

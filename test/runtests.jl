@@ -1,6 +1,10 @@
 using NIDAQ, Test
 import LinearAlgebra
 
+# find_header and write_valuesets, for checking that what is in src is what
+# the generator makes
+include(joinpath(@__DIR__, "..", "dev", "generate_valuesets.jl"))
+
 @testset "no hardware needed" begin
     # str2code yields a NUL-terminated buffer of Cchar
     @test NIDAQ.str2code("Dev1").x == Cchar.(codeunits("Dev1\0"))
@@ -62,17 +66,6 @@ import LinearAlgebra
     if NIDAQ.wrapper_version == NIDAQ.valueset_version
         @test all(isdefined(NIDAQ, c) for cs in values(NIDAQ.value_set_members) for c in cs)
         @test all(length(NIDAQ.value_names[s]) == length(cs) for (s, cs) in NIDAQ.value_set_members)
-    end
-    # and it is exactly what dev/generate_valuesets.jl makes of the header.
-    # the header is NI's and is not in the repository, so this runs only where
-    # a copy has been put in dev
-    header = joinpath(@__DIR__, "..", "dev", "NIDAQmx.h")
-    if isfile(header)
-        shipped = joinpath(@__DIR__, "..", "src", "valuesets_V$(NIDAQ.valueset_version).jl")
-        regenerated = tempname()
-        run(pipeline(`$(Base.julia_cmd()) --startup-file=no $(joinpath(@__DIR__, "..", "dev", "generate_valuesets.jl")) $header $regenerated`, stdout=devnull))
-        unix(file) = replace(read(file, String), "\r\n" => "\n")
-        @test unix(regenerated) == unix(shipped)
     end
 
     # bitmask properties decode to the list of flags set, not to a single name
@@ -155,6 +148,51 @@ import LinearAlgebra
     @test NIDAQ._timeout(NIDAQ.default_timeout) === 10.0
     @test_throws ArgumentError NIDAQ._timeout(-1)
     @test_throws ArgumentError NIDAQ._timeout(NaN)
+end
+
+@testset "generated files" begin
+    # the wrapper for the installed driver is exactly what dev/generator.jl
+    # makes of NI's header, with no hand edits.  the header is NI's and is not
+    # in the repository, so this runs only where the driver and its C support
+    # are installed
+    dev = joinpath(@__DIR__, "..", "dev")
+    src = joinpath(@__DIR__, "..", "src")
+    unix(file) = replace(read(file, String), "\r\n" => "\n")
+    header = find_header()
+    if isnothing(header) || !NIDAQ.driver_available()
+        @info "NI's header or driver was not found; skipping the generation tests"
+    else
+        version = NIDAQ.installed_version()
+
+        # the table of value sets needs nothing but Julia to regenerate
+        if version == NIDAQ.valueset_version
+            regenerated = tempname()
+            redirect_stdout(() -> write_valuesets(header, regenerated), devnull)
+            @test unix(regenerated) == unix(joinpath(src, "valuesets_V$version.jl"))
+        end
+
+        # the constants and functions need Clang.jl, which lives in the dev
+        # environment, resolved for one version of Julia
+        manifest = joinpath(dev, "Manifest.toml")
+        resolved = isfile(manifest) ? match(r"julia_version = \"(\d+\.\d+)", read(manifest, String)) : nothing
+        if !(version in NIDAQ.shipped_versions)
+            @info "no wrapper is shipped for NI-DAQmx $version; run dev/generator.jl to make one"
+        elseif isnothing(resolved)
+            @info "the dev environment is not instantiated; skipping the wrapper generation test"
+        elseif VersionNumber(resolved.captures[1]) != VersionNumber(VERSION.major, VERSION.minor)
+            @info "the dev environment was resolved for Julia $(resolved.captures[1]); skipping the wrapper generation test"
+        else
+            outdir = mktempdir()
+            log = IOBuffer()
+            cmd = `$(Base.julia_cmd()) --startup-file=no --project=$dev $(joinpath(dev, "generator.jl")) version=$version header=$header outdir=$outdir`
+            generated = success(pipeline(cmd, stdout=log, stderr=log))
+            generated || print(String(take!(log)))
+            @test generated
+            for kind in ("constants", "functions")
+                @test unix(joinpath(outdir, "$(kind)_V$version.jl")) == unix(joinpath(src, "$(kind)_V$version.jl"))
+            end
+        end
+    end
 end
 
 # everything else needs the driver and a device.  without them, as on a CI

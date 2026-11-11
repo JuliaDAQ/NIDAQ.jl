@@ -76,7 +76,6 @@ function Base.propertynames(x::CVIAbsoluteTime, private::Bool = false)
         end...)
 end
 
-# const bool32 = uInt32
 const bool32 = Bool32
 
 const TaskHandle = Ptr{Cvoid}
@@ -92,15 +91,11 @@ const DAQmxDoneEventCallbackPtr = Ptr{Cvoid}
 # typedef int32 ( CVICALLBACK * DAQmxSignalEventCallbackPtr
 const DAQmxSignalEventCallbackPtr = Ptr{Cvoid}
 
-# const __CFUNC = __stdcall
-
 # Skipping MacroDefinition: __CFUNC_C __cdecl
 
 # Skipping MacroDefinition: __CFUNCPTRVAR __cdecl
 
 # Skipping MacroDefinition: CVICDECL __cdecl
-
-# const CVICALLBACK = CVICDECL
 
 const TRUE = Clong(1)
 
