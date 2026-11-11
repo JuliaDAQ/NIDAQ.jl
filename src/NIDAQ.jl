@@ -307,6 +307,11 @@ column per channel.  nsamples is the number of samples per channel; -1 reads
 every sample of a finite acquisition or everything currently buffered in a
 continuous one.  T is the element type, and for digital tasks defaults to
 UInt32.
+
+some devices, USB ones at least, buffer nothing on the computer until data is
+first asked for.  the first `read(task)` of a continuous acquisition after
+`start` can therefore return no samples, however long ago the task started;
+later ones return what has accumulated since.  reading in a loop is unaffected.
 """ read
 
 @doc """`write(task, data)`
