@@ -12,9 +12,33 @@
 #
 # with one "Values for" line for each property which draws on the value set.
 # this script turns those blocks into two tables for NIDAQ.jl to load.
-# generator.jl runs it, or by itself:
+# generator.jl runs it, or by itself, which needs nothing but Julia:
 #
-#   julia dev/generate_valuesets.jl [header [output]]
+#   julia dev/generate_valuesets.jl output=<file> [header=<path>]
+
+# NI's header: the copy installed with the driver's C support, or failing that
+# one placed beside this script.  nothing if there is none
+function find_header()
+    candidates = [
+        raw"C:\Program Files (x86)\National Instruments\NI-DAQ\DAQmx ANSI C Dev\include\NIDAQmx.h",
+        raw"C:\Program Files (x86)\National Instruments\Shared\ExternalCompilerSupport\C\include\NIDAQmx.h",
+        "/usr/include/NIDAQmx.h",
+        joinpath(@__DIR__, "NIDAQmx.h")]
+    i = findfirst(isfile, candidates)
+    isnothing(i) ? nothing : candidates[i]
+end
+
+# command-line arguments of the form key=value
+function keyword_args(args; allowed)
+    parsed = Dict{String,String}()
+    for arg in args
+        key, value = occursin('=', arg) ? split(arg, '='; limit=2) : (arg, "")
+        key in allowed && !isempty(value) ||
+            error("unrecognised argument `$arg`; expected $(join(allowed .* "=...", ", "))")
+        parsed[key] = value
+    end
+    parsed
+end
 
 # returns the members of each value set, and the value set of each property.
 # properties are named as their getters are without the DAQmxGet prefix, which
@@ -88,6 +112,9 @@ function write_valuesets(header, output)
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__
-    write_valuesets(get(ARGS, 1, joinpath(@__DIR__, "NIDAQmx.h")),
-                    get(ARGS, 2, joinpath(@__DIR__, "valuesets.jl")))
+    args = keyword_args(ARGS; allowed = ("output", "header"))
+    haskey(args, "output") || error("say where to write the tables with output=<file>")
+    header = get(args, "header", find_header())
+    isnothing(header) && error("NIDAQmx.h was not found; install NI's C support or pass header=<path>")
+    write_valuesets(header, args["output"])
 end

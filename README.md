@@ -465,42 +465,39 @@ take care to cast the other inputs appropriately though.
 Adding Support for a Version of NI-DAQmx
 ========================================
 
-Install [Clang.jl](https://github.com/ihnorton/Clang.jl) to a local folder, e.g. `dev`.  
+Install the new version of NI-DAQmx, including its C support, which is what
+provides `NIDAQmx.h`.  Then, from the root of this repository:
 
-Find `NIDAQmx.h`, which usually lives in
-`C:\Program Files (x86)\National Instruments\NI-DAQ\DAQmx ANSI C Dev\include`.
-and copy `NIDAQmx.h` to `dev` folder.
-
-Run `generator.jl` in `dev` folder, it will generate `NIDAQmx.jl` and `common.jl` in `dev` folder.
-
-Move the above two files to `src` folder, and edit the file names accordingly as below:
 ```
-$ mv NIDAQmx.jl ../src/functions_V<version>.jl
-$ mv common.jl ../src/constants_V<version>.jl
-$ mv valuesets.jl ../src/valuesets_V<version>.jl
+$ julia --project=dev -e 'using Pkg; Pkg.instantiate()'    # once, to install Clang.jl
+$ julia --project=dev dev/generator.jl
 ```
 
-`valuesets.jl` records which constants each enumerated property can take, so
-that `getproperties` can report values by name.  Only the newest
-`valuesets_V<version>.jl` in `src` is loaded, whichever wrapper is in use, so
-an older one can be deleted when a newer one is added.
+The generator asks the driver for its version, reads the header from where NI
+installed it, and writes three files to `src`, each named for the version:
 
-Finally, the following manual edits are necessary:
++ `constants_V<version>.jl`, the driver's types and constants
++ `functions_V<version>.jl`, one `ccall` for each C function
++ `valuesets_V<version>.jl`, which constants each enumerated property can
+take, so that `getproperties` can report values by name
 
-+ In `constants_V<version>.jl`
-  + delete `const __CFUNC = __stdcall`
-  + delete `const CVICALLBACK = CVICDECL`,
-  + change `const bool32 = uInt32` to `const bool32 = Bool32`.
-  + in NI-DAQmx v23.5.0, comment out `const __CFUNC = __stdcall`
-  + in NI-DAQmx v23.5.0 comment out all functions.
-  + in NI-DAQmx v19.6 add `struct CVITime; lsb::uInt64; msb::int64; end`
-  + in NI-DAQmx v17.1.0 comment out `const CVIAbsoluteTime = VOID`
-  + in NI-DAQmx v15 to v18 comment out `using Compat`
-+ In `functions_V<version>.jl`
-  + in NI-DAQmx v21.3 and earlier, globally search for `Cstring` and replace with `SafeCstring`
-  + in NI-DAQmx v18 and earlier, globally search for `Ptr` and replace with `Ref`, then globally
-search for `CallbackRef` and replace with `CallbackPtr`.
-  + for Julia 0.7 support, replace `type` with `_type`
+No manual edits are needed.  To wrap a header other than the installed
+driver's, say which:
+
+```
+$ julia --project=dev dev/generator.jl version=27.0.0 header=/path/to/NIDAQmx.h
+```
+
+Then run the tests, which load every wrapper in `src` in turn against the
+installed driver, and regenerate the installed version's wrapper to check
+that what is in `src` is exactly what the generator makes.  Finally add the
+version to the table under Installation above, and to `CHANGELOG.md`.  Only
+the newest `valuesets_V<version>.jl` is loaded, whichever wrapper is in use,
+so the previous one can be deleted.
+
+The wrappers for 18.6 through 23.5 predate this script.  They were made with
+older versions of Clang.jl and then corrected by hand, and cannot be
+regenerated without the headers of those versions.
 
 
 Author

@@ -1,3 +1,5 @@
 [deps]
 Clang = "40e3b903-d033-50b4-a0cc-940c62c95e31"
-NIDAQ = "66b72792-1abf-55ab-8064-6e9051317175"
+
+[compat]
+Clang = "0.19"
