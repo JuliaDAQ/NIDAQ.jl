@@ -95,6 +95,21 @@ end
         @test_throws ArgumentError setproperty!(t, dev*"/ai0", "Maxx", 5.0)
         @test_throws ArgumentError getproperty(t, dev*"/ai0", "Maxx")
 
+        # boolean properties read back as Bool and can be set with one.  a
+        # separate task, as some calibration properties interact
+        tb = analog_input(dev*"/ai0")
+        if haskey(getproperties(tb, dev*"/ai0"), "ChanCalApplyCalIfExp")
+            was = getproperty(tb, dev*"/ai0", "ChanCalApplyCalIfExp")
+            @test was isa Bool
+            @test isnothing(setproperty!(tb, dev*"/ai0", "ChanCalApplyCalIfExp", !was))
+            @test getproperty(tb, dev*"/ai0", "ChanCalApplyCalIfExp") === !was
+            @test isnothing(setproperty!(tb, dev*"/ai0", "ChanCalApplyCalIfExp", was))
+            @test getproperty(tb, dev*"/ai0", "ChanCalApplyCalIfExp") === was
+        else
+            @info("$dev has no ChanCalApplyCalIfExp property")
+        end
+        @test isnothing(clear(tb))
+
         # acceleration inputs require a range, and IEPE hardware for the rest
         @test_throws ArgumentError analog_input(dev*"/ai0"; type=:acceleration)
         if :Val_Accelerometer in props["AISupportedMeasTypes"][1]

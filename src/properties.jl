@@ -88,7 +88,7 @@ end
 
 # map raw driver values onto something friendlier: named constants for
 # enumerations, Bool for bool32, and a list of strings for comma-separated lists
-_decode(x::Bool32) = reinterpret(UInt32, x) != 0
+_decode(x::Bool32) = Bool(x)
 _decode(x::Int32) = get(signed_constants, x, x)
 _decode(v::Vector{Int32}) = all(x -> haskey(signed_constants, x), v) ? map(x -> signed_constants[x], v) : v
 _decode(v::Vector{<:Union{Int8,UInt8}}) = split(cstring(v), ", ")

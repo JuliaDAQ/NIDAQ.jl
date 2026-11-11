@@ -69,11 +69,11 @@ function _read(t::Task, cfunction::F, ::Type{T}, num_samples::Integer) where {F,
     catch_error( cfunction(t.th,
         Int32(n),
         1.0,
-        reinterpret(Bool32, Val_GroupByChannel),
+        Val_GroupByChannel,
         data,
         UInt32(length(data)),
         num_samples_read,
-        reinterpret(Ptr{Bool32}, C_NULL)) )
+        Ptr{Bool32}(C_NULL)) )
     resize!(data, num_samples_read[]*num_channels[])
     reshape(data, (Int(num_samples_read[]), Int(num_channels[])))
 end
@@ -96,11 +96,11 @@ function Base.read!(data::VecOrMat{T}, t::Union{AITask,DITask}) where {T}
     catch_error( read_cfunction(t, T)(t.th,
         Int32(num_samples),
         1.0,
-        reinterpret(Bool32, Val_GroupByChannel),
+        Val_GroupByChannel,
         data,
         UInt32(length(data)),
         num_samples_read,
-        reinterpret(Ptr{Bool32}, C_NULL)) )
+        Ptr{Bool32}(C_NULL)) )
     num_samples_read[] == num_samples ||
         error("NIDAQmx: read $(num_samples_read[]) of $num_samples samples per channel")
     return data

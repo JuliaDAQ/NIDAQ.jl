@@ -59,9 +59,21 @@ driver_available() = !isempty(driver_path)
 # tracks the installed version
 driver_available() && Base.include_dependency(Libdl.dlpath(NIDAQmx))
 
-# the driver's bool32 is a 32-bit integer; a distinct type lets getproperties
-# tell boolean properties apart from unsigned ones
+"""
+`Bool32`
+
+the driver's `bool32`, a boolean stored in 32 bits.  it is a distinct type,
+rather than an alias for an integer, so that `getproperties` can tell boolean
+properties apart from numeric ones.  it converts from `Bool` and from any
+integer, zero being false, so `true`, `false`, and constants such as
+`Val_GroupByChannel` can be passed wherever the driver wants a `bool32`.
+`Bool(x)` converts one back.
+"""
 primitive type Bool32<:Integer 32 end
+Bool32(x::Bool32) = x
+Bool32(x::Integer) = reinterpret(Bool32, UInt32(x != 0))
+Base.Bool(x::Bool32) = reinterpret(UInt32, x) != 0
+Base.show(io::IO, x::Bool32) = print(io, Bool32, "(", Bool(x), ")")
 
 @static if VERSION >= v"1.11"
     eval(Expr(:public, :Task, :AITask, :AOTask, :DITask, :DOTask, :CITask, :COTask,

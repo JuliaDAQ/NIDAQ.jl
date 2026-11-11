@@ -64,7 +64,7 @@ function quadrature_input(channel::String; decoding::Symbol=:x4,
             str2code(channel),
             str2code(""),
             _lookup(decodings, decoding, "decoding"),
-            reinterpret(Bool32, UInt32(z_enable)),
+            z_enable,
             Float64(z_index_value),
             _lookup(z_index_phases, z_index_phase, "z_index_phase"),
             _lookup(angle_units, units, "units"),
@@ -168,7 +168,7 @@ function Base.read(t::CITask, num_samples::Integer = -1)
             Ref(data,1),
             convert(UInt32,num_samples),
             Ref(num_samples_read,1),
-            reinterpret(Ptr{Bool32},C_NULL)) )
+            Ptr{Bool32}(C_NULL)) )
         resize!(data, num_samples_read[1])
     end
 
@@ -184,7 +184,7 @@ function Base.read(t::CITask, num_samples::Integer = -1)
             Ref(low,1),
             convert(UInt32,num_samples),
             Ref(num_samples_read,1),
-            reinterpret(Ptr{Bool32},C_NULL)) )
+            Ptr{Bool32}(C_NULL)) )
         resize!(high, num_samples_read[1])
         resize!(low, num_samples_read[1])
     end

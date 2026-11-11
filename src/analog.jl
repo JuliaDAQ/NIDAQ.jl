@@ -148,12 +148,12 @@ for (cfunction, types) in (
         num_samples_per_chan_written = Int32[0]
         catch_error( $cfunction(t.th,
             num_samples_per_chan,
-            reinterpret(Bool32, UInt32(false)),
+            false,   # do not start the task automatically
             1.0,
-            reinterpret(Bool32,Val_GroupByChannel),
+            Val_GroupByChannel,
             Ref(data,1),
             Ref(num_samples_per_chan_written,1),
-            reinterpret(Ptr{Bool32},C_NULL)) )
+            Ptr{Bool32}(C_NULL)) )
         num_samples_per_chan_written[1]
     end
     @eval Base.write(t::AOTask, data::Vector{$types}) =
