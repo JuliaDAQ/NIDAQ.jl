@@ -197,7 +197,13 @@ end
 
 ### Other changes
 
-- `Bool32` is no longer exported.  Write `NIDAQ.Bool32` if you need it.
+- `Bool32` is no longer exported.  Write `NIDAQ.Bool32` if you need it, which
+  should now be rare: it converts from `Bool` and from integers, so `true`,
+  `false`, and constants such as `NIDAQ.Val_GroupByChannel` can be passed
+  directly to `setproperty!` and to any low-level wrapper which takes a
+  `bool32`, and `Bool(x)` converts one back.  Before, a boolean property read
+  back as a `Bool` but could only be set with
+  `reinterpret(Bool32, UInt32(value))`.
 - The low-level wrappers and stripped constants, such as `NIDAQ.CfgSampClkTiming`
   and `NIDAQ.Val_Rising`, are declared `public` on Julia 1.11 and later.
 - Empty or NUL-terminated strings for low-level calls should be built with

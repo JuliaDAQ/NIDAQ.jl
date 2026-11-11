@@ -54,6 +54,25 @@ import LinearAlgebra
     @test reinterpret(UInt32, reinterpret(NIDAQ.Bool32, UInt32(1))) == 1
     @test NIDAQ._decode(reinterpret(NIDAQ.Bool32, UInt32(0))) === false
     @test NIDAQ._decode(reinterpret(NIDAQ.Bool32, UInt32(5))) === true
+    # it converts from Bool and from integers, zero being false, so that true,
+    # false, and the driver's constants can be passed wherever one is wanted
+    @test NIDAQ.Bool32(true) === reinterpret(NIDAQ.Bool32, UInt32(1))
+    @test NIDAQ.Bool32(false) === reinterpret(NIDAQ.Bool32, UInt32(0))
+    @test NIDAQ.Bool32(NIDAQ.Val_GroupByScanNumber) === NIDAQ.Bool32(true)
+    @test NIDAQ.Bool32(NIDAQ.Val_GroupByChannel) === NIDAQ.Bool32(false)
+    @test NIDAQ.Bool32(5) === NIDAQ.Bool32(true)
+    @test NIDAQ.Bool32(NIDAQ.Bool32(true)) === NIDAQ.Bool32(true)
+    @test convert(NIDAQ.Bool32, true) === NIDAQ.Bool32(true)
+    @test Ref{NIDAQ.Bool32}(true)[] === NIDAQ.Bool32(true)
+    @test Base.cconvert(NIDAQ.Bool32, false) === NIDAQ.Bool32(false)   # what ccall does
+    # and back again, any nonzero value being true
+    @test Bool(NIDAQ.Bool32(true)) === true
+    @test Bool(NIDAQ.Bool32(false)) === false
+    @test Bool(reinterpret(NIDAQ.Bool32, UInt32(5))) === true
+    @test NIDAQ.Bool32(true) == true
+    @test NIDAQ.Bool32(false) != true
+    @test sprint(show, NIDAQ.Bool32(true)) == "NIDAQ.Bool32(true)"
+    @test isempty(Test.detect_ambiguities(NIDAQ))
     @test !Base.isexported(NIDAQ, :Bool32)
     @static if VERSION >= v"1.11"
         @test Base.ispublic(NIDAQ, :Bool32)
