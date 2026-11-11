@@ -139,15 +139,17 @@ function generate_pulses(channel::String; units::Symbol=:seconds,
 end
 
 """
-`read(task, nsamples=-1) -> Vector[, Vector]`
+`read(task, nsamples=-1; timeout=10.0) -> Vector[, Vector]`
 
 receive data from a counter input task.  pulse time and pulse tick
 measurements yield two vectors, the high and low durations; everything else
 yields one.  nsamples is the number of samples to read; -1 reads every sample
 of a finite acquisition, everything currently buffered in a continuous one, or
-one sample from an on-demand task.
+one sample from an on-demand task.  timeout is how long to wait for them, in
+seconds; `Inf` waits forever, which suits measurements of slow external
+signals.
 """
-function Base.read(t::CITask, num_samples::Integer = -1)
+function Base.read(t::CITask, num_samples::Integer = -1; timeout::Real = default_timeout)
     channel = only(task_channels(t))   # a counter task holds a single channel
     num_samples == -1 && (num_samples = auto_samples(t))
 
@@ -164,7 +166,7 @@ function Base.read(t::CITask, num_samples::Integer = -1)
         data = Vector{T}(undef, num_samples)
         catch_error( cfunction(t.th,
             convert(Int32,num_samples),
-            1.0,
+            _timeout(timeout),
             Ref(data,1),
             convert(UInt32,num_samples),
             Ref(num_samples_read,1),
@@ -178,7 +180,7 @@ function Base.read(t::CITask, num_samples::Integer = -1)
         low = Vector{T}(undef, num_samples)
         catch_error( cfunction(t.th,
             convert(Int32,num_samples),
-            1.0,
+            _timeout(timeout),
             Val_GroupByChannel,
             Ref(high,1),
             Ref(low,1),

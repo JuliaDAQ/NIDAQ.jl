@@ -364,6 +364,11 @@ of samples, as in `read(t)`, to get every sample of a finite acquisition or
 everything currently buffered in a continuous one, and use `read!(buffer, t)`
 to fill a preallocated matrix instead of allocating a new one.
 
+A read waits for the samples to be acquired, and raises an error if they have
+not been within `timeout` seconds, 10 by default.  Raise it for a long
+acquisition, as in `read(t; timeout=60)`, or pass `Inf` to wait forever.
+`write` takes the same keyword.
+
 Similar work flows exist for `analog_output`, `digital_input`,
 and `digital_output`.
 
