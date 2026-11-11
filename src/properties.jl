@@ -86,13 +86,17 @@ function _channel_type(t::Task, channel::String)
     val1[1], val2[1]
 end
 
-# map raw driver values onto something friendlier: named constants for
-# enumerations, Bool for bool32, and a list of strings for comma-separated lists
+# map raw driver values onto something friendlier: Bool for bool32, and a list
+# of strings for comma-separated lists.  numbers are left as they are
 _decode(x::Bool32) = Bool(x)
-_decode(x::Int32) = get(signed_constants, x, x)
-_decode(v::Vector{Int32}) = all(x -> haskey(signed_constants, x), v) ? map(x -> signed_constants[x], v) : v
 _decode(v::Vector{<:Union{Int8,UInt8}}) = split(cstring(v), ", ")
 _decode(x) = x
+
+# an enumerated value becomes the name it has in its property's value set.  a
+# value the set does not list is left as a number, and a list is converted only
+# if every element is known, so that its element type stays uniform
+_decode_enum(x::Integer, names) = get(names, x, x)
+_decode_enum(v::AbstractVector, names) = all(x -> haskey(names, x), v) ? [names[x] for x in v] : v
 
 # a bitmask becomes the list of flag names whose bits are set
 _decode_flags(x::Integer, flags) = [name for (bit, name) in sort(flags, by=first) if x & bit != 0]
@@ -120,12 +124,12 @@ function _getproperty(args, p::PropertyInfo)
         data = Vector{T}(undef, sz)
         _check(p.getter(args..., data, UInt32(sz)), p)
     end
-    if p.name in plain_properties
-        data
-    elseif isnothing(p.flags)
-        _decode(data)
-    else
+    if !isnothing(p.flags)
         _decode_flags(data, get(bit_flags, p.flags, Pair{Int32,Symbol}[]))
+    elseif !isnothing(p.values)
+        _decode_enum(data, p.values)
+    else
+        _decode(data)
     end
 end
 
@@ -188,7 +192,11 @@ the second element is `nothing` for them.
 """
 function channel_type(t::Task, channel::String)
     kind, meas = _channel_type(t, channel)
-    _decode(kind), isnothing(meas) ? nothing : _decode(meas)
+    kind_name = _decode_enum(kind, something(property_decoder("ChanType"), Dict{Int32,Symbol}()))
+    isnothing(meas) && return kind_name, nothing
+    # the second code comes from the AI, CI MeasType or the AO, CO OutputType property
+    property = channel_kinds[kind] * (kind == Val_AO || kind == Val_CO ? "OutputType" : "MeasType")
+    kind_name, _decode_enum(meas, something(property_decoder(property), Dict{Int32,Symbol}()))
 end
 
 """

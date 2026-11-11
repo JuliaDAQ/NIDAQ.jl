@@ -241,7 +241,7 @@ as well as a string containing the name of the channel:
 ```
 julia> getproperties(t, "Dev1/ai0")
 Dict{String, Tuple{Any, Bool}} with 61 entries:
-  "AccelUnits"                        => (:Val_g, true)
+  "AccelUnits"                        => (:Val_AccelUnit_g, true)
   "BridgeUnits"                       => (:Val_VoltsPerVolt, true)
   "CalculatedPowerCurrentMax"         => (10.0, true)
   "CalculatedPowerCurrentMin"         => (-10.0, true)
@@ -477,7 +477,13 @@ Move the above two files to `src` folder, and edit the file names accordingly as
 ```
 $ mv NIDAQmx.jl ../src/functions_V<version>.jl
 $ mv common.jl ../src/constants_V<version>.jl
+$ mv valuesets.jl ../src/valuesets_V<version>.jl
 ```
+
+`valuesets.jl` records which constants each enumerated property can take, so
+that `getproperties` can report values by name.  Only the newest
+`valuesets_V<version>.jl` in `src` is loaded, whichever wrapper is in use, so
+an older one can be deleted when a newer one is added.
 
 Finally, the following manual edits are necessary:
 

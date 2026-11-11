@@ -141,20 +141,38 @@ function __init__()
     end
 end
 
-# value => name for the signed Val_* enumeration constants, used to report
-# enumerated properties by name.  there is deliberately no such table for the
-# unsigned constants: those are attribute ids, and every UInt32 property is a
-# plain number such as a count, size, or serial number
-const signed_constants = Dict{Int64,Symbol}()
+# many of the driver's constants share a value: 10280 is both Val_Rising and
+# Val_RisingSlope, and 1 is fourteen different things.  a property's value can
+# therefore only be named by knowing which of the driver's value sets the
+# property draws on.  the header records that, and dev/generate_valuesets.jl
+# extracts it into value_set_members and property_value_sets.  value sets only
+# grow from one driver version to the next, so the newest table serves every
+# wrapper, the constants a wrapper lacks being skipped.  properties which have
+# no value set, and every UInt32 property, are plain numbers and are not named
+const valueset_version = maximum(VersionNumber(m.captures[1])
+    for m in filter(!isnothing, match.(r"^valuesets_V(\d+\.\d+\.\d+)\.jl$", readdir(@__DIR__))))
+include("valuesets_V$valueset_version.jl")
 
-# several constants share a value, e.g. Val_Rising and Val_RisingSlope are both
-# 10280.  keep the shortest name for each value, which is also the familiar one
-function _remember!(d::Dict, value, name::Symbol)
-    old = get(d, value, nothing)
-    if old === nothing || length(String(name)) < length(String(old))
-        d[value] = name
+# value => name within each value set
+const value_names = Dict{String,Dict{Int32,Symbol}}()
+for (set, members) in value_set_members
+    names_in_set = value_names[set] = Dict{Int32,Symbol}()
+    for name in members
+        original = Symbol("DAQmx_", name)
+        isdefined(NIDAQ, original) && (names_in_set[Int32(getfield(NIDAQ, original))] = name)
     end
-    nothing
+end
+
+# value => name for an enumerated property, or nothing if it is not one.  the
+# property is named as its getter is without the DAQmxGet prefix.  the
+# driver's ...Ex getters take a device name too, but return what their plain
+# namesakes do
+function property_decoder(property::AbstractString)
+    set = get(property_value_sets, property, nothing)
+    if set === nothing && endswith(property, "Ex")
+        set = get(property_value_sets, chop(property, tail=2), nothing)
+    end
+    set === nothing ? nothing : value_names[set]
 end
 
 # some Int32 properties are bitmasks of the Val_Bit_<family>_<flag> constants
@@ -169,12 +187,6 @@ function bitmask_family(name::AbstractString)
     isnothing(i) ? nothing : bitmask_families[i].second
 end
 
-# the few Int32 properties which hold a plain number rather than an
-# enumeration value, and so must not be looked up in signed_constants
-const plain_properties = ("BridgeBalanceCoarsePot",      # 0 to 127
-                          "BridgeBalanceFinePot",        # 0 to 4095
-                          "SampClkOverrunSentinelVal")   # user-chosen sentinel
-
 # NI-DAQmx exposes properties through getter/setter pairs named
 # DAQmxGet<group><property> and DAQmxSet<group><property>.  the table below is
 # built once, when the module loads, so that getproperties does not have to
@@ -186,6 +198,7 @@ struct PropertyInfo
     eltype::Type                      # type of the value, e.g. Float64, or Cchar for strings
     scalar::Bool                      # true: one Ref out-arg;  false: buffer plus size
     flags::Union{Nothing,String}      # bit-flag family if the value is a bitmask
+    values::Union{Nothing,Dict{Int32,Symbol}}   # value => name if it is an enumeration
 end
 
 # group => number of arguments the caller supplies before the out-arg
@@ -211,9 +224,10 @@ function register_property!(sym::Symbol, getter::Function)
         setsym = Symbol("DAQmxSet" * rest)
         setter = isdefined(NIDAQ, setsym) ? getfield(NIDAQ, setsym) : nothing
         pname = rest[length(group)+1:end]
+        T = eltype(out)
         property_table[group][pname] =
-            PropertyInfo(pname, getter, setter, eltype(out), length(argtypes) == nargs+1,
-                         bitmask_family(pname))
+            PropertyInfo(pname, getter, setter, T, length(argtypes) == nargs+1,
+                         bitmask_family(pname), T === Int32 ? property_decoder(rest) : nothing)
         return
     end
 end
@@ -232,7 +246,6 @@ for sym in names(NIDAQ, all=true)
     elseif val isa Signed
         sym_str[1:min(end,4)]=="Val_" || continue
         @eval const $(Symbol(sym_str)) = convert(Int32,$sym)
-        _remember!(signed_constants, val, Symbol(sym_str))
         push!(public_names, Symbol(sym_str))
         m = match(r"^Val_Bit_([A-Za-z]+)_\w+$", sym_str)
         m === nothing || push!(get!(bit_flags, m.captures[1], Pair{Int32,Symbol}[]),

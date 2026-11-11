@@ -170,20 +170,21 @@ reflection that every call used to cost is gone; what remains is the driver's
 own round trips, a few milliseconds per property.  Boolean properties, which
 the old code silently dropped, now appear.
 
-Three mislabelings are fixed.  Where several driver constants share a value,
-the shortest name is now reported, so an edge setting reads back as
-`:Val_Rising` rather than `:Val_RisingSlope`.  The properties which are
-bitmasks, the `*TrigUsage` and `*Couplings` families, decode to a vector of
-the flag names set, such as
+Values are now named per property.  Many of the driver's constants share a
+value, so the old code, which looked a value up among all of them, could
+report a property under the name of an unrelated constant.  Each enumerated
+property is now decoded against its own value set, taken from the header, so
+an edge setting reads back as `:Val_Rising` and a trigger slope with the same
+number as `:Val_RisingSlope`.  A value its set does not list is left as a
+number.  The properties which are bitmasks, the `*TrigUsage` and `*Couplings`
+families, decode to a vector of the flag names set, such as
 `[:Val_Bit_TriggerUsageTypes_Pause, :Val_Bit_TriggerUsageTypes_Start]`, where
-they used to be reported either as a bare integer or under the name of an
-unrelated constant which happened to share the value.  And `UInt32` properties
-are no longer looked up in the table of attribute ids: counts, sizes, tick
-counts, and serial numbers are always plain numbers now, where before a count
-of 6240 was reported as `:SelfCal_Supported` because that is the id of an
-attribute.  The three `Int32` properties which hold plain numbers,
-`BridgeBalanceCoarsePot`, `BridgeBalanceFinePot`, and
-`SampClkOverrunSentinelVal`, are likewise left undecoded.
+they used to be reported either as a bare integer or under a wrong name.
+Everything else is a plain number and stays one: `UInt32` properties such as
+counts, sizes, and serial numbers, where before a count of 6240 was reported
+as `:SelfCal_Supported` because that is the id of an attribute, and the three
+`Int32` properties which are not enumerations, `BridgeBalanceCoarsePot`,
+`BridgeBalanceFinePot`, and `SampClkOverrunSentinelVal`.
 
 A new `getproperty(task, channel, property)` reads a single channel property.
 `setproperty!` raises an `ArgumentError` for an unknown or read-only property
