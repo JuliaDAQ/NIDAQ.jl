@@ -369,6 +369,26 @@ not been within `timeout` seconds, 10 by default.  Raise it for a long
 acquisition, as in `read(t; timeout=60)`, or pass `Inf` to wait forever.
 `write` takes the same keyword.
 
+A task holds its device until it is cleared.  The surest way to clear one is
+the do-block form of the channel functions, which clears the task when the
+block exits, even through an error, and returns what the block does:
+
+```
+julia> analog_input("Dev1/ai0:1") do t
+           start(t)
+           read(t, 3)
+       end
+3×2 Matrix{Float64}:
+ -0.190352  -0.261135
+ -0.235396  -0.243118
+ -0.244405  -0.240544
+```
+
+Where a task has to outlive a block, as at the REPL, call `clear` yourself as
+above.  A task which is neither cleared nor reachable any longer is cleared by
+the garbage collector eventually, but at no particular time, so do not rely on
+that: until then it holds the device, and an output keeps running.
+
 Similar work flows exist for `analog_output`, `digital_input`,
 and `digital_output`.
 

@@ -17,7 +17,7 @@ t = generate_pulses("Dev1/ctr0")
 NIDAQ.CfgImplicitTiming(t.th, NIDAQ.Val_ContSamps, UInt64(1))
 ```
 
-More examples are in tests/.
+More examples are in test/hardware.jl.
 """
 module NIDAQ
 

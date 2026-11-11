@@ -1,3 +1,8 @@
+# whether the device under test lacks a subsystem.  the driver reports one
+# with no channels as a list holding a single empty string, not as an empty
+# list, so the length of the list says nothing
+lacks(key) = all(isempty, props[key][1])
+
 @testset "installation" begin
 @test typeof(getproperties()) == Dict{String,Tuple{Any,Bool}}
 @test haskey(getproperties(), "NIDAQMajorVersion")
@@ -28,12 +33,20 @@ end
         @test typeof(analog_current_output_ranges(dev)) == LinearAlgebra.Adjoint{Float64,Array{Float64,2}}
         @test (@test_deprecated analog_input_ranges(dev)) == analog_voltage_input_ranges(dev)
         @test (@test_deprecated analog_output_ranges(dev)) == analog_voltage_output_ranges(dev)
+        # with a single device the forms which name none use it
+        if length(devices()) == 1
+            @test analog_input_channels() == analog_input_channels(dev)
+            @test analog_voltage_input_ranges() == analog_voltage_input_ranges(dev)
+        end
+        # a subsystem is lacking exactly when it has no channels to list
+        @test lacks("AIPhysicalChans") == isempty(first(analog_input_channels(dev)))
+        @test lacks("COPhysicalChans") == isempty(first(counter_output_channels(dev)))
     end
 end
 
 
 @testset "task lifecycle" begin
-    if length(props["AIPhysicalChans"][1]) == 0
+    if lacks("AIPhysicalChans")
         @info("$dev does not support AIPhysicalChans")
     else
         ch = dev*"/ai0"
@@ -78,7 +91,7 @@ end
 end
 
 @testset "analog input" begin
-    if length(props["AIPhysicalChans"][1]) == 0
+    if lacks("AIPhysicalChans")
         @info("$dev does not support AIPhysicalChans")
     else
         t = analog_input(dev*"/ai0")
@@ -191,7 +204,7 @@ end
 end
 
 @testset "analog output" begin
-    if length(props["AOPhysicalChans"][1]) == 0
+    if lacks("AOPhysicalChans")
         @info("$dev does not support AOPhysicalChans")
     else
         t = analog_output(dev*"/ao0")
@@ -217,7 +230,7 @@ end
 
 
 @testset "digital input" begin
-    if length(props["DILines"][1]) == 0
+    if lacks("DILines")
         @info("$dev does not support DILines")
     else
         t = digital_input(dev*"/Port0/Line0")
@@ -261,7 +274,7 @@ end
 end
 
 @testset "digital output" begin
-    if length(props["DOLines"][1]) == 0
+    if lacks("DOLines")
         @info("$dev does not support DOLines")
     else
         t = digital_output(dev*"/Port0/Line0")
@@ -293,7 +306,7 @@ end
 end
 
 @testset "counter input" begin
-    if isempty(props["CIPhysicalChans"][1][1])
+    if lacks("CIPhysicalChans")
         @info("$dev does not support CIPhysicalChans")
     else
         ch = dev*"/ctr0"
@@ -356,7 +369,7 @@ end
 end
 
 @testset "counter output" begin
-    if isempty(props["COPhysicalChans"][1][1])
+    if lacks("COPhysicalChans")
         @info("$dev does not support COPhysicalChans")
     else
         t = generate_pulses(dev*"/ctr0")

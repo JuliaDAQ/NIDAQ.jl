@@ -141,6 +141,13 @@ include(joinpath(@__DIR__, "..", "dev", "generate_valuesets.jl"))
     @test isnothing(NIDAQ.select_wrapper(v"17.1.0"))
     @test NIDAQ.select_wrapper(v"2.0.0", [v"1.0.0", v"3.0.0"]) == v"1.0.0"
 
+    # naming no device means the only one there is, and says so otherwise
+    @test NIDAQ.only_device(["Dev1"]) == "Dev1"
+    none = try NIDAQ.only_device(String[]); catch e; e; end
+    @test none isa ArgumentError && occursin("no NIDAQ devices", none.msg)
+    several = try NIDAQ.only_device(["Dev1", "Dev2"]); catch e; e; end
+    @test several isa ArgumentError && occursin("Dev1, Dev2", several.msg)
+
     # the timeout keyword of read and write is in seconds, Inf waiting forever
     @test NIDAQ._timeout(2) === 2.0
     @test NIDAQ._timeout(0) === 0.0

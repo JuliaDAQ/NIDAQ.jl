@@ -112,8 +112,9 @@ durations accept any `Real`.
 | `generate_pulses(ch; low=2.0, high=2.0)` | `generate_pulses(ch; low=2, high=2)` |
 | `generate_pulses(ch; low=50, high=50)` | `generate_pulses(ch; units=:ticks, low=50, high=50)` |
 
-Note that `generate_pulses(ch)` with no arguments used to mean 2 ticks, because
-the defaults were integers, and now means 2 seconds.
+Note that code which passed integers still runs without error, but the numbers
+now mean seconds: `low=50` was 50 ticks and is now 50 seconds.  The same goes
+for the call with no arguments, whose defaults of 2 used to be ticks.
 
 ### `acceleration_input` is `analog_input` with `type=:acceleration`
 
@@ -192,11 +193,8 @@ instead of an `UndefVarError`.
 
 ### Task lifecycle
 
-Tasks are cleared by a finalizer if they are garbage collected without an
-explicit `clear`, so forgotten tasks no longer hold the device.  `clear` is
-idempotent and nulls the task handle, `close` is an alias for it, and `isopen`
-reports whether a task is still live.  Every channel constructor has a
-do-block form which clears the task when the block exits:
+Every channel constructor has a do-block form which clears the task when the
+block exits, whether normally or through an error:
 
 ```julia
 analog_input("Dev1/ai0") do t
@@ -204,6 +202,16 @@ analog_input("Dev1/ai0") do t
     read(t, 100)
 end
 ```
+
+Prefer that wherever a task's life fits inside a block, and an explicit `clear`
+otherwise.  `clear` is idempotent and nulls the task handle, `close` is an
+alias for it, and `isopen` reports whether a task is still live.
+
+A task which is garbage collected without having been cleared is now cleared
+by a finalizer.  That is a safety net and not a substitute for either of the
+above: the collector runs at no particular time, and never while the task is
+still bound to a name, and until it does a forgotten task holds its device and
+a forgotten output keeps running.
 
 ### Other changes
 

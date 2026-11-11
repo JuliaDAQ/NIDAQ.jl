@@ -22,7 +22,12 @@ end
 """
 `clear(task)`
 
-stop the task and release its resources.  Calling `clear` twice is harmless.
+stop the task and release its resources, the device among them.  Calling
+`clear` twice is harmless.  The do-block form of the channel functions, as in
+`analog_input(channel) do task ... end`, calls it when the block exits, even
+through an error, and is the surest way to see that it happens.  A task which
+is never cleared is cleared when it is garbage collected, but that can be
+arbitrarily late.
 """
 function clear(t::Task)
     th = t.th
