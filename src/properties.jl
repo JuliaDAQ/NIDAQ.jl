@@ -8,6 +8,13 @@ function devices()
     String.(filter(!isempty, devs))
 end
 
+# the device meant when none is named, which must be the only one there is
+function only_device(found = devices())
+    length(found) == 1 && return only(found)
+    throw(ArgumentError(isempty(found) ? "no NIDAQ devices were found" :
+        "there are $(length(found)) NIDAQ devices, $(join(found, ", ")); name the one you mean"))
+end
+
 for (jfunction, cfunction) in (
         (:analog_input_channels, GetDevAIPhysicalChans),
         (:analog_output_channels, GetDevAOPhysicalChans),
@@ -19,11 +26,7 @@ for (jfunction, cfunction) in (
         String.(split(getstring($cfunction, str2code(device)), ", "))
     end
 
-    @eval function $jfunction()
-        d = devices()
-        length(d)!=1 && error("NIDAQmx: more than one device")
-        $(Symbol(jfunction))(d[1])
-    end
+    @eval $jfunction() = $jfunction(only_device())
 
     @eval @doc $(string("`", jfunction, """() -> Vector{String}`
 
@@ -47,11 +50,7 @@ for (jfunction, cfunction) in (
         reshape(data,(2,length(data)>>1))'
     end
 
-    @eval function $jfunction()
-        d = devices()
-        length(d)!=1 && error("NIDAQmx: more than one device")
-        $jfunction(d[1])
-    end
+    @eval $jfunction() = $jfunction(only_device())
 
     @eval @doc $(string("`", jfunction, """() -> Matrix`
 
