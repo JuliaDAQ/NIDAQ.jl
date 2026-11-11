@@ -232,30 +232,38 @@ function register_property!(sym::Symbol, getter::Function)
     end
 end
 
-public_names = Symbol[]
-for sym in names(NIDAQ, all=true)
-    @isdefined(sym) || continue
-    sym_str = string(sym)
-    (length(sym_str)<5 || sym_str[1:5]!="DAQmx") && continue
-    sym_str = sym_str[6:end]
-    sym_str[1]=='_' && (sym_str = sym_str[2:end])
-    val = getfield(NIDAQ, sym)
-    if val isa Unsigned
-        @eval const $(Symbol(sym_str)) = UInt32($sym)
-        push!(public_names, Symbol(sym_str))
-    elseif val isa Signed
-        sym_str[1:min(end,4)]=="Val_" || continue
-        @eval const $(Symbol(sym_str)) = convert(Int32,$sym)
-        push!(public_names, Symbol(sym_str))
-        m = match(r"^Val_Bit_([A-Za-z]+)_\w+$", sym_str)
-        m === nothing || push!(get!(bit_flags, m.captures[1], Pair{Int32,Symbol}[]),
-                               Int32(val) => Symbol(sym_str))
-    elseif val isa Function
-        @eval const $(Symbol(sym_str)) = $sym
-        push!(public_names, Symbol(sym_str))
-        register_property!(sym, val)
+# give every function and constant of the driver a second name without its
+# DAQmx prefix, the constants converted to 32 bits, and declare those names
+# public.  along the way collect the bit flags and register the properties
+let public_names = Symbol[]
+    for sym in names(NIDAQ, all=true)
+        @isdefined(sym) || continue
+        sym_str = string(sym)
+        (length(sym_str)<5 || sym_str[1:5]!="DAQmx") && continue
+        sym_str = sym_str[6:end]
+        sym_str[1]=='_' && (sym_str = sym_str[2:end])
+        val = getfield(NIDAQ, sym)
+        if val isa Unsigned
+            @eval const $(Symbol(sym_str)) = UInt32($sym)
+            push!(public_names, Symbol(sym_str))
+        elseif val isa Signed
+            sym_str[1:min(end,4)]=="Val_" || continue
+            @eval const $(Symbol(sym_str)) = convert(Int32,$sym)
+            push!(public_names, Symbol(sym_str))
+            m = match(r"^Val_Bit_([A-Za-z]+)_\w+$", sym_str)
+            m === nothing || push!(get!(bit_flags, m.captures[1], Pair{Int32,Symbol}[]),
+                                   Int32(val) => Symbol(sym_str))
+        elseif val isa Function
+            @eval const $(Symbol(sym_str)) = $sym
+            push!(public_names, Symbol(sym_str))
+            register_property!(sym, val)
+        end
+    end
+    @static if VERSION >= v"1.11"
+        eval(Expr(:public, public_names...))
     end
 end
+
 # convert a NUL-terminated buffer filled in by the driver to a String
 function cstring(data::Vector{Cchar})
     n = something(findfirst(iszero, data), length(data)+1) - 1
@@ -270,10 +278,6 @@ function getstring(f, args...)
     data = Vector{Cchar}(undef, sz)
     catch_error(f(args..., data, UInt32(sz)))
     cstring(data)
-end
-
-@static if VERSION >= v"1.11"
-    eval(Expr(:public, public_names...))
 end
 
 function catch_error(code::Int32, extra::String=""; err_fcn=error)

@@ -141,14 +141,14 @@ end
             @info("$dev does not support accelerometer measurements")
         end
         @test isnothing(start(t))
-        @test length(NIDAQ.read(t, 3)) == 3
+        @test length(read(t, 3)) == 3
         # the return type is inferable and does not depend on the channel count
-        @test (@inferred NIDAQ.read(t, 3)) isa Matrix{Float64}
-        @test (@inferred NIDAQ.read(t, 3, Int16)) isa Matrix{Int16}
+        @test (@inferred read(t, 3)) isa Matrix{Float64}
+        @test (@inferred read(t, 3, Int16)) isa Matrix{Int16}
         @test (@inferred read(t, 3; timeout=2)) isa Matrix{Float64}
         @test_throws ArgumentError read(t, 3; timeout=-1)
-        @test size(NIDAQ.read(t, 3)) == (3, 1)
-        @test_throws ArgumentError NIDAQ.read(t, 3, Float32)
+        @test size(read(t, 3)) == (3, 1)
+        @test_throws ArgumentError read(t, 3, Float32)
         buf1 = Vector{Float64}(undef, 3)
         @test read!(buf1, t) === buf1
         @test all(isfinite, buf1)
@@ -161,7 +161,7 @@ end
         @test_throws ArgumentError analog_input(dev*"/ai0"; terminal_config=:sideways)
         @test_throws ArgumentError analog_input(dev*"/ai0"; type=:resistance)
         @test isnothing(start(t))
-        @test length(NIDAQ.read(t, 6, UInt32)) == 12
+        @test length(read(t, 6, UInt32)) == 12
         buf2 = Matrix{Float64}(undef, 6, 2)
         @test read!(buf2, t) === buf2
         @test all(isfinite, buf2)
@@ -173,14 +173,14 @@ end
         @test NIDAQ.CfgSampClkTiming(t.th, NIDAQ.str2code(""), 100.0, NIDAQ.Val_Rising,
                 NIDAQ.Val_FiniteSamps, UInt64(10)) == 0
         @test isnothing(start(t))
-        @test length(NIDAQ.read(t)) == 20
+        @test length(read(t)) == 20
         @test isnothing(stop(t))
         # a finite task larger than any fixed buffer: read(t) must size the
         # buffer from the task, not guess
         @test NIDAQ.CfgSampClkTiming(t.th, NIDAQ.str2code(""), 5000.0, NIDAQ.Val_Rising,
                 NIDAQ.Val_FiniteSamps, UInt64(2000)) == 0
         @test isnothing(start(t))
-        @test size(NIDAQ.read(t)) == (2000, 2)
+        @test size(read(t)) == (2000, 2)
         @test isnothing(stop(t))
         # an acquisition lasting more than a second, which the old fixed
         # one-second timeout could not read.  a read which times out loses
@@ -210,17 +210,17 @@ end
         t = analog_output(dev*"/ao0")
         @test typeof(t) == NIDAQ.AOTask
         @test isnothing(start(t))
-        @test NIDAQ.write(t, rand(3)) == 3
+        @test write(t, rand(3)) == 3
         @test write(t, rand(3); timeout=2) == 3
         @test write(t, rand(3, 1); timeout=Inf) == 3
         @test isnothing(stop(t))
         @test isnothing(analog_output(t, dev*"/ao1"))
         @test isnothing(start(t))
-        @test NIDAQ.write(t, rand(UInt32,6,2)) == 6
+        @test write(t, rand(UInt32,6,2)) == 6
         @test isnothing(stop(t))
         @test NIDAQ.CfgSampClkTiming(t.th, NIDAQ.str2code(""), 100.0, NIDAQ.Val_Rising,
                 NIDAQ.Val_FiniteSamps, UInt64(10)) == 0
-        @test NIDAQ.write(t, rand(UInt32,10,2)) == 10
+        @test write(t, rand(UInt32,10,2)) == 10
         @test isnothing(start(t))
         @test NIDAQ.WaitUntilTaskDone(t.th,10.0) == 0
         @test isnothing(stop(t))
@@ -237,9 +237,9 @@ end
         @test typeof(t) == NIDAQ.DITask
         @test channel_type(t, dev*"/Port0/Line0") == (:Val_DI, nothing)
         @test isnothing(start(t))
-        @test length(NIDAQ.read(t, 3)) == 3
-        @test (@inferred NIDAQ.read(t, 3)) isa Matrix{UInt32}
-        @test (@inferred NIDAQ.read(t, 3, UInt8)) isa Matrix{UInt8}
+        @test length(read(t, 3)) == 3
+        @test (@inferred read(t, 3)) isa Matrix{UInt32}
+        @test (@inferred read(t, 3, UInt8)) isa Matrix{UInt8}
         @test size(read(t, 3; timeout=2)) == (3, 1)
         buf1 = Vector{UInt32}(undef, 3)
         @test read!(buf1, t) === buf1
@@ -248,7 +248,7 @@ end
         @test isnothing(stop(t))
         @test isnothing(digital_input(t, dev*"/Port0/Line1"))
         @test isnothing(start(t))
-        @test length(NIDAQ.read(t, 6)) == 12
+        @test length(read(t, 6)) == 12
         buf2 = Matrix{UInt32}(undef, 6, 2)
         @test read!(buf2, t) === buf2
         buf3 = Matrix{UInt8}(undef, 4, 2)
@@ -263,7 +263,7 @@ end
                                         NIDAQ.Val_FiniteSamps, UInt64(10)) == 0
             if first(props["ProductCategory"]) != :Val_MSeriesDAQ # M Series has no digital onboard clock
             @test isnothing(start(t))
-            @test length(NIDAQ.read(t)) == 20
+            @test length(read(t)) == 20
             @test isnothing(stop(t))
             end
             @test isnothing(clear(t))
@@ -280,12 +280,12 @@ end
         t = digital_output(dev*"/Port0/Line0")
         @test typeof(t) == NIDAQ.DOTask
         @test isnothing(start(t))
-        @test NIDAQ.write(t, round.(UInt32, [1,0,1,0,1,0])) == 6
+        @test write(t, round.(UInt32, [1,0,1,0,1,0])) == 6
         @test write(t, round.(UInt32, [1,0,1,0,1,0]); timeout=2) == 6
         @test isnothing(stop(t))
         @test isnothing(digital_output(t, dev*"/Port0/Line1"))
         @test isnothing(start(t))
-        @test NIDAQ.write(t, round.(UInt32, [1 0; 0 0; 1 0; 0 1; 1 1; 0 1])) == 6
+        @test write(t, round.(UInt32, [1 0; 0 0; 1 0; 0 1; 1 1; 0 1])) == 6
         @test isnothing(stop(t))
         rslt = Ref{UInt32}(0)
         NIDAQ.DAQmxGetBufOutputOnbrdBufSize(t.th, rslt)
@@ -293,7 +293,7 @@ end
             @test NIDAQ.CfgSampClkTiming(t.th, NIDAQ.str2code(""), 100.0, NIDAQ.Val_Rising,
                                         NIDAQ.Val_FiniteSamps, UInt64(10)) == 0
             if first(props["ProductCategory"]) != :Val_MSeriesDAQ # M Series has no digital onboard clock
-                @test NIDAQ.write(t, rand(UInt32,10,2)) == 10
+                @test write(t, rand(UInt32,10,2)) == 10
             @test isnothing(start(t))
                 @test NIDAQ.WaitUntilTaskDone(t.th,10.0) == 0
             @test isnothing(stop(t))
